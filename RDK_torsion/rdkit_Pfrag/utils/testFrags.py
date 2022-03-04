@@ -1,0 +1,110 @@
+# %%
+"""
+The OEGetFuncGroupFragments function uses the following heuristics to fragment a molecule:
+
+1. rings are left intact i.e. considered as a unit
+2. exo-ring double bonds are not cleaved from adjacent rings
+3. hetero atoms next to each other are kept together
+4. sp and sp2 atoms next to each other are kept together
+5. in order to avoid generating one atom fragments isolated atoms are attached to the smallest neighbor fragment
+
+    Functional group inclusion criteria:
+    - <= 5 heavy atoms
+    - must contain at least one hetero atom
+    - non-ring
+"""
+
+RDK_NCOPS_group_SMARTS_NOS_simplified = [
+    "[CX3]=[OX1]",   # fr_C=O
+    "[C!$(C=O)]-[OH]",  # fr_Al_OH
+    "c[OH1]", # fr_Ar_OH
+    "[OX2](-[#6])-[CH3]",  # fr_methoxy
+    "[CX3]=[NX2]-[OX2]",  # fr_oxime C=N-O-
+    "[#6][CX3](=O)[OX2H0][#6]",  # fr_ester CC=OOC
+    "C-C(=O)[O;H1,-]",  # fr_Al_COO C-COOH, C-COO-
+    "c-C(=O)[O;H1,-]",  # fr_Ar_COO c-COOH, c-COO-
+    "[#6]C(=O)[O;H,-1]",  # fr_COO  C-COOH, C-COO-
+    "[CX3](=O)[OX1H0-,OX2H1]",  # fr_COO2 -COO-， 
+    "[#6][CX3](=O)[#6]",  # fr_ketone, -C(=O)-C
+    # "[OD2]([#6])[#6]", # ether  # fr_ether -O-, include unexpected
+    "[CX3H1](=O)[#6]",  # fr_aldehyde H-C(=O)-
+    # "c-[NX3]", # fr_Ar_NH aniline 
+    "[Nv3](=C)-[#6]",  # fr_Ar_NH imine
+    "[NX1]#[CX2]", # fr_nitrile nitrile
+    "[NX3]-[NX3]", # fr_hdrzine -N-N-
+    "C=N-[NX3]", # fr_hdrzone C=N-N
+    "[N!$(N-O)]=O", # fr_nitroso N=O
+    "[N!$(N=O)](-O)-C", # fr_N N-(O)-C
+    "[$([NX3](=O)=O),$([NX3+](=O)[O-])][!#8]", # fr_nitro 
+    "N(=O)(O)[#6]", # #fr_nitro
+    "[#6]-N=N-[#6]", # fr_azo -N=N-
+    "[N+]#N", # fr_diazo
+    "[$(*-[NX2-]-[NX2+]#[NX1]),$(*-[NX2]=[NX2+]=[NX1-])]", # fr_azide
+    "C(=O)-N", # fr_amide
+    "C(=O)-[NH2]", # fr_priamide
+    "C(=N)(-N)-[!#7]", # fr_amidine
+    "C(=N)(N)N", # fr_guanido
+    "N(-C(=O))-C=O", # fr_imide
+    "N=C=O", # fr_isocyan
+    "N=C=S", # fr_isothiocyan
+    "S-C#N", # fr_thiocyan
+    "[SX2](-[#6])-C", # fr_sulfide
+    "C=[SX1]", # fr_C=S
+    "S(=,-[OX1;+0,-1])(=,-[OX1;+0,-1])(-[#6])-[#6]", #fr_sulfone
+    "N-S(=,-[OX1;+0,-1])(=,-[OX1;+0,-1])-[#6]", #fr_sulfonamd
+    "[NH2]-S(=,-[OX1;+0;-1])(=,-[OX1;+0;-1])-[#6]", #fr_prisulfonamd
+    # "[$(P(=[OX1])([$([OX2H]),$([OX1-]),$([OX2]P)])([$([OX2H]),$([OX1-]),$([OX2]P)])[$([OX2H]),$([OX1-]),$([OX2]P)]),$([P+]([OX1-])([$([OX2H]),$([OX1-]),$([OX2]P)])([$([OX2H]),$([OX1-]),$([OX2]P)])[$([OX2H]),$([OX1-]),$([OX2]P)])]", #fr_phos_acid
+    # "[$(P(=[OX1])([OX2][#6])([$([OX2H]),$([OX1-]),$([OX2][#6])])[$([OX2H]),$([OX1-]),$([OX2][#6]),$([OX2]P)]),$([P+]([OX1-])([OX2][#6])([$([OX2H]),$([OX1-]),$([OX2][#6])])[$([OX2H]),$([OX1-]),$([OX2][#6]),$([OX2]P)])]", #fr_phos_ester
+]
+
+
+
+
+RDK_NCOPS_group_SMARTS_most = [
+    "[CX3]=[OX1]",
+    "[C!$(C=O)]-[OH]",
+    "[OX2](-[#6])-[CH3]",
+    "[CX3]=[NX2]-[OX2]",
+    "[#6][CX3](=O)[OX2H0][#6]",
+    "C-C(=O)[O;H1,-]",
+    "c-C(=O)[O;H1,-]",
+    "[#6]C(=O)[O;H,-1]",
+    "[CX3](=O)[OX1H0-,OX2H1]",
+    "[#6][CX3](=O)[#6]",
+    # "[OD2]([#6])[#6]", # ether
+    # "[OX2H]-c1ccccc1",  # fr_phenol include non-ring
+    "[CX3H1](=O)[#6]",
+    "[$([NX4+]),$([NX4]=*)]"
+    "[NH2,nH2]",
+    "[NH1,nH1]",
+    "[NH0,nH0]",
+    "[Nv3](=C)-[#6]",
+    "[NX1]#[CX2]",
+    "[NX3]-[NX3]",
+    "C=N-[NX3]",
+    "[N!$(N-O)]=O",
+    "[N!$(N=O)](-O)-C",
+    "[$([NX3](=O)=O),$([NX3+](=O)[O-])][!#8]",
+    "N(=O)(O)[#6]",
+    "[#6]-N=N-[#6]",
+    "[N+]#N",
+    "[$(*-[NX2-]-[NX2+]#[NX1]),$(*-[NX2]=[NX2+]=[NX1-])]",
+    "C(=O)-N",
+    "C(=O)-[NH2]",
+    "C(=N)(-N)-[!#7]",
+    "C(=N)(N)N",
+    "[nH]",
+    "N(-C(=O))-C=O",
+    "N=C=O",
+    "N=C=S",
+    "S-C#N",
+    "[SX2](-[#6])-C",
+    "[SH]",
+    "C=[SX1]",
+    "S(=,-[OX1;+0,-1])(=,-[OX1;+0,-1])(-[#6])-[#6]",
+    "S(=,-[OX1;+0,-1])(=,-[OX1;+0,-1])(-[#6])-[#6]",
+    "N-S(=,-[OX1;+0,-1])(=,-[OX1;+0,-1])-[#6]",
+    "[NH2]-S(=,-[OX1;+0;-1])(=,-[OX1;+0;-1])-[#6]",
+    "[$(P(=[OX1])([$([OX2H]),$([OX1-]),$([OX2]P)])([$([OX2H]),$([OX1-]),$([OX2]P)])[$([OX2H]),$([OX1-]),$([OX2]P)]),$([P+]([OX1-])([$([OX2H]),$([OX1-]),$([OX2]P)])([$([OX2H]),$([OX1-]),$([OX2]P)])[$([OX2H]),$([OX1-]),$([OX2]P)])]",
+    "[$(P(=[OX1])([OX2][#6])([$([OX2H]),$([OX1-]),$([OX2][#6])])[$([OX2H]),$([OX1-]),$([OX2][#6]),$([OX2]P)]),$([P+]([OX1-])([OX2][#6])([$([OX2H]),$([OX1-]),$([OX2][#6])])[$([OX2H]),$([OX1-]),$([OX2][#6]),$([OX2]P)])]",
+]
