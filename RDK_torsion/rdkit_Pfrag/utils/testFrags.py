@@ -16,28 +16,34 @@ The OEGetFuncGroupFragments function uses the following heuristics to fragment a
 
 RDK_NCOPS_group_SMARTS_NOS_simplified = [
     "[CX3]=[OX1]",   # fr_C=O
-    "[C!$(C=O)]-[OH]",  # fr_Al_OH
-    "c[OH1]", # fr_Ar_OH
-    "[OX2](-[#6])-[CH3]",  # fr_methoxy
+    # "[C!$(C=O)]-[OH]",  # fr_Al_OH
+    # "c[OH1]", # fr_Ar_OH
+    "[OX2](-[#6])-[CH3]",  # fr_methoxy, keep because of capping CH3
     "[CX3]=[NX2]-[OX2]",  # fr_oxime C=N-O-
-    "[#6][CX3](=O)[OX2H0][#6]",  # fr_ester CC=OOC
-    "C-C(=O)[O;H1,-]",  # fr_Al_COO C-COOH, C-COO-
-    "c-C(=O)[O;H1,-]",  # fr_Ar_COO c-COOH, c-COO-
-    "[#6]C(=O)[O;H,-1]",  # fr_COO  C-COOH, C-COO-
+    "[CX3](=O)[OX2H0]",  # C(=O)O added by qcxia
+    # "[#6][CX3](=O)[OX2H0][#6]",  # fr_ester CC=OOC
+    "C(=O)[O;H1,-]", # COO, COO-, COOH, added by qcxia
+    # "C-C(=O)[O;H1,-]",  # fr_Al_COO C-COOH, C-COO-
+    # "c-C(=O)[O;H1,-]",  # fr_Ar_COO c-COOH, c-COO-
+    # "[#6]C(=O)[O;H,-1]",  # fr_COO  C-COOH, C-COO-
     "[CX3](=O)[OX1H0-,OX2H1]",  # fr_COO2 -COO-， 
     "[#6][CX3](=O)[#6]",  # fr_ketone, -C(=O)-C
     # "[OD2]([#6])[#6]", # ether  # fr_ether -O-, include unexpected
     "[CX3H1](=O)[#6]",  # fr_aldehyde H-C(=O)-
     # "c-[NX3]", # fr_Ar_NH aniline 
-    "[Nv3](=C)-[#6]",  # fr_Ar_NH imine
+    "[Nv3](=C)",  # C=N, added by qcxia
+    # "[Nv3](=C)-[#6]",  # fr_Ar_NH imine
     "[NX1]#[CX2]", # fr_nitrile nitrile
     "[NX3]-[NX3]", # fr_hdrzine -N-N-
     "C=N-[NX3]", # fr_hdrzone C=N-N
     "[N!$(N-O)]=O", # fr_nitroso N=O
-    "[N!$(N=O)](-O)-C", # fr_N N-(O)-C
+    "[N!$(N=O)](-O)", # N-(O) added by qcxia
+    # "[N!$(N=O)](-O)-C", # fr_N N-(O)-C
     "[$([NX3](=O)=O),$([NX3+](=O)[O-])][!#8]", # fr_nitro 
-    "N(=O)(O)[#6]", # #fr_nitro
-    "[#6]-N=N-[#6]", # fr_azo -N=N-
+    "N(=O)(O)", # nitro, added by qcxia
+    "N=N", # N=N, added by qcxia
+    # "N(=O)(O)[#6]", # #fr_nitro
+    # "[#6]-N=N-[#6]", # fr_azo -N=N-
     "[N+]#N", # fr_diazo
     "[$(*-[NX2-]-[NX2+]#[NX1]),$(*-[NX2]=[NX2+]=[NX1-])]", # fr_azide
     "C(=O)-N", # fr_amide
@@ -48,11 +54,15 @@ RDK_NCOPS_group_SMARTS_NOS_simplified = [
     "N=C=O", # fr_isocyan
     "N=C=S", # fr_isothiocyan
     "S-C#N", # fr_thiocyan
-    "[SX2](-[#6])-C", # fr_sulfide
+    # "[SX2](-[#6])-C", # fr_sulfide
     "C=[SX1]", # fr_C=S
-    "S(=,-[OX1;+0,-1])(=,-[OX1;+0,-1])(-[#6])-[#6]", #fr_sulfone
-    "N-S(=,-[OX1;+0,-1])(=,-[OX1;+0,-1])-[#6]", #fr_sulfonamd
-    "[NH2]-S(=,-[OX1;+0;-1])(=,-[OX1;+0;-1])-[#6]", #fr_prisulfonamd
+    "S(=,-[OX1;+0,-1])(=,-[OX1;+0,-1])", # O=S=O, added by qcxia
+    # "S(=,-[OX1;+0,-1])(=,-[OX1;+0,-1])(-[#6])-[#6]", #fr_sulfone
+    "N-S(=,-[OX1;+0,-1])(=,-[OX1;+0,-1])", #N-S(=O)=O, added by qcxia
+    # "N-S(=,-[OX1;+0,-1])(=,-[OX1;+0,-1])-[#6]", #fr_sulfonamd
+    "[NH2]-S(=,-[OX1;+0;-1])(=,-[OX1;+0;-1])", # NH2-S(=O)=O, added by qcxia 
+    # "[NH2]-S(=,-[OX1;+0;-1])(=,-[OX1;+0;-1])-[#6]", #fr_prisulfonamd
+    "[P](=[#8])(-[!#1])(-[!#1])-[!#1]", # phosphate, added by qcxia
     # "[$(P(=[OX1])([$([OX2H]),$([OX1-]),$([OX2]P)])([$([OX2H]),$([OX1-]),$([OX2]P)])[$([OX2H]),$([OX1-]),$([OX2]P)]),$([P+]([OX1-])([$([OX2H]),$([OX1-]),$([OX2]P)])([$([OX2H]),$([OX1-]),$([OX2]P)])[$([OX2H]),$([OX1-]),$([OX2]P)])]", #fr_phos_acid
     # "[$(P(=[OX1])([OX2][#6])([$([OX2H]),$([OX1-]),$([OX2][#6])])[$([OX2H]),$([OX1-]),$([OX2][#6]),$([OX2]P)]),$([P+]([OX1-])([OX2][#6])([$([OX2H]),$([OX1-]),$([OX2][#6])])[$([OX2H]),$([OX1-]),$([OX2][#6]),$([OX2]P)])]", #fr_phos_ester
 ]

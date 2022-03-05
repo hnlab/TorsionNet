@@ -1,0 +1,5 @@
+outputs/*
+*.png
+log
+*.sh
+test.ipynb

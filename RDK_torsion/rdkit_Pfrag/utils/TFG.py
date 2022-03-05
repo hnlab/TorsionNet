@@ -1,4 +1,5 @@
 import os
+from pickle import TRUE
 import sys
 import copy
 from functools import partial
@@ -7,7 +8,8 @@ from pathlib import Path
 
 from rdkit import Chem
 from rdkit.Chem.Lipinski import RotatableBondSmarts
-from rdkit.Chem.rdDistGeom import EmbedMolecule, EmbedMultipleConfs
+from rdkit.Chem.rdDistGeom import EmbedMolecule, EmbedMultipleConfs, ETKDGv3
+from rdkit.Chem.rdForceFieldHelpers import MMFFOptimizeMolecule
 
 sys.path.append("/pubhome/qcxia02/git-repo/TorsionNet/RDK_torsion/rdkit_Pfrag/utils")
 from utils import GetRingSystems, findneighbour, Get_sorted_heavy
@@ -65,13 +67,33 @@ def KeepRing3(mol, ExpandedTorsion, rings):
     return list(ExpandedTorsion)
 
 
-def KeepFuncGroup4(mol, ExpandedTorsion, FuncGroupIdxs):
+def KeepOrtho4(mol, ExpandedTorsion, TorsionQuartet, rings):
+    rings = GetRingSystems(mol, includeSpiro=False)
+    # rdkit.Chem.rdmolops.GetShortestPath((Mol)arg1, (int)arg2, (int)arg3) → tuple
+    for ring in rings:
+        for ring_idx in ring:
+            if ring_idx in ExpandedTorsion:
+                neighs = findneighbour(mol, ring_idx)
+                label = False
+                for neigh1 in neighs:
+                    if neigh1 not in ring and neigh1 in TorsionQuartet:
+                        label = True
+                if label:
+                    for neigh1 in neighs:
+                        neigh2s = findneighbour(mol, neigh1)
+                        ExpandedTorsion.extend(neigh2s)
+
+    ExpandedTorsion = set(ExpandedTorsion)
+    return list(ExpandedTorsion)
+
+
+def KeepFuncGroup5(mol, ExpandedTorsion, FuncGroupIdxs):
     for funcgroup in FuncGroupIdxs: 
         for idx in ExpandedTorsion:
-            if mol.GetAtomWithIdx(idx).GetAtomicNum() not in [1,6]:
-                if idx in funcgroup:
-                    ExpandedTorsion.extend(list(funcgroup))
-                    break
+            # if mol.GetAtomWithIdx(idx).GetAtomicNum() not in [1,6]:
+            if idx in funcgroup:
+                ExpandedTorsion.extend(list(funcgroup))
+                break
     
     ExpandedTorsion = set(ExpandedTorsion)
 
@@ -99,26 +121,6 @@ def KeepFuncGroup4(mol, ExpandedTorsion, FuncGroupIdxs):
     """
     #########################################
 
-    return list(ExpandedTorsion)
-
-
-def KeepOrtho5(mol, ExpandedTorsion, TorsionQuartet, rings):
-    rings = GetRingSystems(mol, includeSpiro=False)
-    # rdkit.Chem.rdmolops.GetShortestPath((Mol)arg1, (int)arg2, (int)arg3) → tuple
-    for ring in rings:
-        for ring_idx in ring:
-            if ring_idx in ExpandedTorsion:
-                neighs = findneighbour(mol, ring_idx)
-                label = False
-                for neigh1 in neighs:
-                    if neigh1 not in ring and neigh1 in TorsionQuartet:
-                        label = True
-                if label:
-                    for neigh1 in neighs:
-                        neigh2s = findneighbour(mol, neigh1)
-                        ExpandedTorsion.extend(neigh2s)
-
-    ExpandedTorsion = set(ExpandedTorsion)
     return list(ExpandedTorsion)
 
 
@@ -196,29 +198,42 @@ def CapOpenValenced7(mol, ExpandedTorsion, TorsionQuartet):
 
     return new_mol.GetMol(), quartet_new
 
-def GenStartingConf8(mol, quartet_new, name="test.sdf"):
+def GenStartingConf8(mol, quartet_new, outpath=Path("outputs"), name="test.sdf"):
     # Get initial 3D structure
     Chem.SanitizeMol(mol)
     Chem.Kekulize(mol)
     mol = Chem.AddHs(mol)
     
     quartet_new_str = ' '.join([str(idx) for idx in quartet_new])
+    mol.SetProp("_Name", name)
     mol.SetProp("TORSION_ATOMS_FRAGMENT", quartet_new_str)
 
-    EmbedMolecule(mol) # initial single 3D structure
+    # EmbedMolecule(mol) # initial single 3D structure
+    # MMFFOptimizeMolecule(mol) # MMFF optimize
 
-    outpath = Path("outputs")
+    params = ETKDGv3()
+    params.numThreads=4
+    params.useSmallRingTorsions=True
+    params.pruneRmsThresh=0.1
+    cids = EmbedMultipleConfs(mol, numConfs=5, params=params) # 5 confs
+    mol_confs = [ mol for cid in cids ]
+
     if not outpath.exists():
         outpath.mkdir()
+    # writer = Chem.SDWriter(str(outpath / (name + ".sdf")))
+    # writer.write(mol)
+    # writer.close()
 
     writer = Chem.SDWriter(str(outpath / (name + ".sdf")))
-    writer.write(mol)
+    i = 0
+    for mol_conf in mol_confs:
+        writer.write(mol_conf, confId=i)
     writer.close()
 
     return mol
 
 class TorsionFragmentGenerator(object):
-    def __init__(self, mol, name):
+    def __init__(self, mol, outpath, name):
         rings = GetRingSystems(mol, includeSpiro=False)  # no spiro ring
         fcgps = [ mol.GetSubstructMatches(Chem.MolFromSmarts(fcgp)) for fcgp in RDK_NCOPS_group_SMARTS_NOS_simplified ]
         fcgp_flatten = []
@@ -239,23 +254,27 @@ class TorsionFragmentGenerator(object):
 
         print(">>> TorsionQuartet:")
         index = 0
+        quartet_news, quartet_olds = [], []
         for TorsionPair in TorsionPairs:
             TorsionQuartet = GetQuartetAtoms1(mol_noH, TorsionPair)            
             if TorsionQuartet:
                 print(TorsionQuartet)
+                quartet_olds.append(TorsionQuartet) # Note that the molecule is canonicalized and thus the indexes may not be the same.
                 ExpandedTorsion = ExpandQuartet2(mol_noH, TorsionQuartet)
                 ExpandedTorsion = KeepRing3(mol_noH, ExpandedTorsion, rings)
-                ExpandedTorsion = KeepFuncGroup4(mol_noH, ExpandedTorsion, fcgp_flatten)
-                ExpandedTorsion = KeepOrtho5(mol_noH, ExpandedTorsion, TorsionQuartet, rings)
+                ExpandedTorsion = KeepOrtho4(mol_noH, ExpandedTorsion, TorsionQuartet, rings)
+                ExpandedTorsion = KeepFuncGroup5(mol_noH, ExpandedTorsion, fcgp_flatten)
                 ExpandedTorsion = IncludeH6(mol, ExpandedTorsion)
-
+                # print(ExpandedTorsion)
                 new_mol, quartet_new = CapOpenValenced7(mol, ExpandedTorsion, TorsionQuartet)
-                new_mol = GenStartingConf8(new_mol, quartet_new, name + "_" + str(index)) # with 3D structure
+                new_mol = GenStartingConf8(new_mol, quartet_new, outpath, name + "_" + str(index)) # with 3D structure
 
                 new_mols.append(new_mol)
+                quartet_news.append(quartet_new)
                 out_names.append(name + "_" + str(index))
                 index += 1
 
         self.mols = new_mols
-        self.quartets = quartet_new
+        self.old_quartets = quartet_olds
+        self.new_quartets = quartet_news
         self.outnames = out_names
