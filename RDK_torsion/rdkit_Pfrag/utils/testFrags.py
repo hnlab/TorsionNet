@@ -39,7 +39,8 @@ RDK_NCOPS_group_SMARTS_NOS_simplified = [
     "[N!$(N-O)]=O", # fr_nitroso N=O
     "[N!$(N=O)](-O)", # N-(O) added by qcxia
     # "[N!$(N=O)](-O)-C", # fr_N N-(O)-C
-    "[$([NX3](=O)=O),$([NX3+](=O)[O-])][!#8]", # fr_nitro 
+    "[$([NX3](=O)=O),$([NX3+](=O)[O-])]", # fr_nitro, added by qcxia
+    # "[$([NX3](=O)=O),$([NX3+](=O)[O-])][!#8]", # fr_nitro 
     "N(=O)(O)", # nitro, added by qcxia
     "N=N", # N=N, added by qcxia
     # "N(=O)(O)[#6]", # #fr_nitro
@@ -48,7 +49,8 @@ RDK_NCOPS_group_SMARTS_NOS_simplified = [
     "[$(*-[NX2-]-[NX2+]#[NX1]),$(*-[NX2]=[NX2+]=[NX1-])]", # fr_azide
     "C(=O)-N", # fr_amide
     "C(=O)-[NH2]", # fr_priamide
-    "C(=N)(-N)-[!#7]", # fr_amidine
+    "C(=N)(-N)" # C(=N)(-N), added by qcxia
+    # "C(=N)(-N)-[!#7]", # fr_amidine
     "C(=N)(N)N", # fr_guanido
     "N(-C(=O))-C=O", # fr_imide
     "N=C=O", # fr_isocyan

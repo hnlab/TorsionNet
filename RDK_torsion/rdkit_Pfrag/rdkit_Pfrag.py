@@ -26,17 +26,25 @@ if True:
     # mol = Chem.SDMolSupplier(args.sdf, removeHs = False)[0]
     # mol2file = "/pubhome/qcxia02/git-repo/DL4molcst/scripts/dock_models/3-conf-docks/results/AmpC/compounds/mol2mols/mol2mols/cpds.binders.0.101.mol2"
     mol2file = args.mol2
+    sdffile = args.sdf
     outpath = args.outpath
     imgpath = args.imgpath
-    molname = Path(mol2file).name[:-5]
 
     for path in [outpath, imgpath]:
         if not path.exists():
             os.system(f"mkdir -p {str(path)}")
 
+    if args.sdf:
+        mol = Chem.SDMolSupplier(mol2file, removeHs = False)[0] # readfile
+        molname = Path(sdffile).name[:-4]
+
+    if args.mol2:
+        mol = Chem.MolFromMol2File(mol2file, removeHs = False) # readfile
+        molname = Path(mol2file).name[:-5]
+
     print(f">>>>>> Dealing with {molname} <<<<<<")
-    mol = Chem.MolFromMol2File(mol2file, removeHs = False)
-    mol = Chem.MolFromSmiles(Chem.MolToSmiles(mol))
+
+    mol = Chem.MolFromSmiles(Chem.MolToSmiles(mol)) # canonicalize
     Chem.SanitizeMol(mol)
     Chem.Kekulize(mol, clearAromaticFlags=True) # To bypass complex Kekulize Error
     mol = Chem.AddHs(mol)

@@ -15,6 +15,28 @@ sys.path.append("/pubhome/qcxia02/git-repo/TorsionNet/RDK_torsion/rdkit_Pfrag/ut
 from utils import GetRingSystems, findneighbour, Get_sorted_heavy
 from testFrags import RDK_NCOPS_group_SMARTS_NOS_simplified
 
+def checkbonded(mol, torsion_quartet):
+    set_tor_quart = set([int(idxr) for idxr in torsion_quartet])
+    for idxr in set_tor_quart:
+        neigh_idxr2 = findneighbour(mol, int(idxr))
+        if len(set(neigh_idxr2).intersection(set_tor_quart)) == 2:
+            idxr2 = idxr
+            break
+
+    for idxr in set_tor_quart:
+        neigh_idxr = findneighbour(mol, int(idxr))
+        if len(set(neigh_idxr).intersection(set_tor_quart)) == 1:
+            if idxr2 in neigh_idxr:
+                idxr1 = idxr
+            else:
+                idxr4 = idxr
+        else:
+            if idxr != idxr2:
+                idxr3 = idxr
+
+    return idxr1, idxr2, idxr3, idxr4
+    
+
 def GetTorsion0(mol) -> list:
     TorsionPairs = []
     all_rot = mol.GetSubstructMatches(RotatableBondSmarts)
@@ -80,8 +102,9 @@ def KeepOrtho4(mol, ExpandedTorsion, TorsionQuartet, rings):
                         label = True
                 if label:
                     for neigh1 in neighs:
-                        neigh2s = findneighbour(mol, neigh1)
-                        ExpandedTorsion.extend(neigh2s)
+                        if neigh1 in ring: # in case of aliphatic ring, neigh1 must in the same ring
+                            neigh2s = findneighbour(mol, neigh1)
+                            ExpandedTorsion.extend(neigh2s)
 
     ExpandedTorsion = set(ExpandedTorsion)
     return list(ExpandedTorsion)
@@ -158,7 +181,7 @@ def CapOpenValenced7(mol, ExpandedTorsion, TorsionQuartet):
         neigh_idxs = findneighbour(mol, idx)
         for neigh_idx in neigh_idxs:
             if neigh_idx not in ExpandedTorsion and mol.GetAtomWithIdx(neigh_idx).GetAtomicNum() > 1:
-                count += 1
+                count += int(mol.GetBondBetweenAtoms(idx, neigh_idx).GetBondTypeAsDouble()) # single 1.0, double 2.0, aromatic 1.5, but with kekulize, aromatic will be either 1 or 2
         if (atom.GetAtomicNum() in [7, 8, 16]): #N,O,S
             NOS_edged_idxs[idx] = count
         if (atom.GetAtomicNum() in [6]): #C, C=C problem not considered
@@ -196,6 +219,10 @@ def CapOpenValenced7(mol, ExpandedTorsion, TorsionQuartet):
                     new_atom_map[idx * (i+1)*10], new_atom_map[idx * (i+1) * 10 + j + 1], Chem.BondType.SINGLE
                 )
 
+    ## reorder quartet_new
+    new_mol_mol = new_mol.GetMol()
+    idxr1, idxr2, idxr3, idxr4 = checkbonded(new_mol_mol, quartet_new)
+    quartet_new = [idxr1, idxr2, idxr3, idxr4]
     return new_mol.GetMol(), quartet_new
 
 def GenStartingConf8(mol, quartet_new, outpath=Path("outputs"), name="test.sdf"):
