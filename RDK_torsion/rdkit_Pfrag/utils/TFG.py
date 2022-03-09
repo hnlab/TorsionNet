@@ -9,7 +9,7 @@ from pathlib import Path
 from rdkit import Chem
 from rdkit.Chem.Lipinski import RotatableBondSmarts
 from rdkit.Chem.rdDistGeom import EmbedMolecule, EmbedMultipleConfs, ETKDGv3
-from rdkit.Chem.rdForceFieldHelpers import MMFFOptimizeMolecule
+from rdkit.Chem.rdForceFieldHelpers import MMFFOptimizeMolecule,MMFFOptimizeMoleculeConfs
 
 sys.path.append("/pubhome/qcxia02/git-repo/TorsionNet/RDK_torsion/rdkit_Pfrag/utils")
 from utils import GetRingSystems, findneighbour, Get_sorted_heavy
@@ -242,7 +242,10 @@ def GenStartingConf8(mol, quartet_new, outpath=Path("outputs"), name="test.sdf")
     params.numThreads=4
     params.useSmallRingTorsions=True
     params.pruneRmsThresh=0.1
+    params.clearConfs=True
+    
     cids = EmbedMultipleConfs(mol, numConfs=5, params=params) # 5 confs
+    MMFFOptimizeMoleculeConfs(mol) # optimize, otherwise failed in xtb opt
     mol_confs = [ mol for cid in cids ]
 
     if not outpath.exists():
@@ -252,8 +255,7 @@ def GenStartingConf8(mol, quartet_new, outpath=Path("outputs"), name="test.sdf")
     # writer.close()
 
     writer = Chem.SDWriter(str(outpath / (name + ".sdf")))
-    i = 0
-    for mol_conf in mol_confs:
+    for i, mol_conf in enumerate(mol_confs):
         writer.write(mol_conf, confId=i)
     writer.close()
 
