@@ -1,5 +1,6 @@
-from pickle import NONE
 from rdkit import Chem
+import os
+from pathlib import Path
 
 def findcharge(sdffile) -> list:
     with open(sdffile, "r") as f:
@@ -16,6 +17,27 @@ def findcharge(sdffile) -> list:
         # charged_atom is now a list of all charged_atoms in mol
     return charged_idx
 
+def getsdfchg(sdffile):
+
+    sdflines = Path(sdffile).read_text().split("\n")
+    ifchg = False
+    for line in sdflines:
+        if line.startswith("M  CHG"):
+            ifchg = True
+            line = line.strip()
+            line = line.split()
+            atom_num = int(line[2])
+            counter = 4
+            charge = []
+            for i in range(atom_num):
+                charge.append(int(line[counter]))
+                counter +=2
+            assert len(charge) == atom_num, 'something wrong'
+            total_charge = sum(charge)
+
+    chg = 0 if not ifchg else total_charge
+
+    return chg
 
 def findneighbour(mol, idxr) -> list:
     atom = mol.GetAtomWithIdx(idxr)  # Atoms: c(harged)atom
@@ -69,4 +91,22 @@ def Get_sorted_heavy(mol, idxlist):
         if element in atom_nums: 
             return idxlist[atom_nums.index(element)]
     
-    return NONE # if no selected atoms
+    return None # if no selected atoms
+
+# Read mol2 molecule once per time
+def next_mol2_lines(infile):
+    """Method to return one mol2 block once."""
+    lines = list()
+
+    for line in open(infile):
+        if "@<TRIPOS>MOLECULE" in line:
+            if len(lines) == 0:
+                lines.append(line)
+            else: # in case there are multiple mol2blocks in infile
+                yield lines
+                lines = list()
+                lines.append(line)
+        else:
+            lines.append(line)
+
+    yield lines
