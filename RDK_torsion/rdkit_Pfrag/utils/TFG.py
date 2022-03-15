@@ -223,9 +223,9 @@ def CapOpenValenced7(mol, ExpandedTorsion, TorsionQuartet):
     new_mol_mol = new_mol.GetMol()
     idxr1, idxr2, idxr3, idxr4 = checkbonded(new_mol_mol, quartet_new)
     quartet_new = [idxr1, idxr2, idxr3, idxr4]
-    return new_mol.GetMol(), quartet_new
+    return new_mol_mol, quartet_new
 
-def GenStartingConf8(mol, quartet_new, outpath=Path("outputs"), name="test.sdf"):
+def GenStartingConf8(mol, quartet_new, TorsionQuartet, outpath=Path("outputs"), name="test.sdf"):
     # Get initial 3D structure
     Chem.SanitizeMol(mol)
     Chem.Kekulize(mol)
@@ -233,6 +233,7 @@ def GenStartingConf8(mol, quartet_new, outpath=Path("outputs"), name="test.sdf")
     
     quartet_new_str = ' '.join([str(idx) for idx in quartet_new])
     mol.SetProp("_Name", name)
+    mol.SetProp("OLD_TORSION_ATOMS_FRAGMENT", TorsionQuartet)
     mol.SetProp("TORSION_ATOMS_FRAGMENT", quartet_new_str)
 
     # EmbedMolecule(mol) # initial single 3D structure
@@ -296,7 +297,7 @@ class TorsionFragmentGenerator(object):
                 ExpandedTorsion = IncludeH6(mol, ExpandedTorsion)
                 # print(ExpandedTorsion)
                 new_mol, quartet_new = CapOpenValenced7(mol, ExpandedTorsion, TorsionQuartet)
-                new_mol = GenStartingConf8(new_mol, quartet_new, outpath, name + "_" + str(index)) # with 3D structure
+                new_mol = GenStartingConf8(new_mol, quartet_new, TorsionQuartet, outpath, name + "_" + str(index)) # with 3D structure
 
                 new_mols.append(new_mol)
                 quartet_news.append(quartet_new)

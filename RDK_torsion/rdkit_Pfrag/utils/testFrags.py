@@ -16,8 +16,8 @@ The OEGetFuncGroupFragments function uses the following heuristics to fragment a
 
 RDK_NCOPS_group_SMARTS_NOS_simplified = [
     "[CX3]=[OX1]",   # fr_C=O
-    # "[C!$(C=O)]-[OH]",  # fr_Al_OH
-    # "c[OH1]", # fr_Ar_OH
+    "[C!$(C=O)]-[OH]",  # fr_Al_OH
+    "c[OH1]", # fr_Ar_OH
     "[OX2](-[#6])-[CH3]",  # fr_methoxy, keep because of capping CH3
     "[CX3]=[NX2]-[OX2]",  # fr_oxime C=N-O-
     "[CX3](=O)[OX2H0]",  # C(=O)O added by qcxia
@@ -30,7 +30,7 @@ RDK_NCOPS_group_SMARTS_NOS_simplified = [
     "[#6][CX3](=O)[#6]",  # fr_ketone, -C(=O)-C
     # "[OD2]([#6])[#6]", # ether  # fr_ether -O-, include unexpected
     "[CX3H1](=O)[#6]",  # fr_aldehyde H-C(=O)-
-    # "c-[NX3]", # fr_Ar_NH aniline 
+    "c-[NX3]", # fr_Ar_NH aniline 
     "[Nv3](=C)",  # C=N, added by qcxia
     # "[Nv3](=C)-[#6]",  # fr_Ar_NH imine
     "[NX1]#[CX2]", # fr_nitrile nitrile

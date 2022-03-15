@@ -13,7 +13,7 @@ from TFG import TorsionFragmentGenerator
 
 if True:
     """
-    Usage: python rdkit_Pfrag.py --mol2 mol2file.mol2 --outpath outpath --imgpath imgpath
+    Usage: python rdkit_Pfrag.py --mol2 mol2file.mol2 --outpath outpath --imgpath imgpath &> 
     """
     parser = argparse.ArgumentParser("RDKit Torsion Fragment Generator")
     parser.add_argument("--sdf", type=str, help="path for sdf file with single M")
