@@ -1,7 +1,9 @@
-from pathlib import Path
+from pathlib import Path, PosixPath
+import argparse
 
 from rdkit import Chem
 from rdkit.Chem import rdMolTransforms
+from rdkit.Chem import rdmolops
 
 def findneighbour(mol, idxr) -> list:
     atom = mol.GetAtomWithIdx(idxr)  # Atoms: c(harged)atom
@@ -33,11 +35,23 @@ def checkbonded(mol, torsion_quartet):
 
     return idxr1, idxr2, idxr3, idxr4
 
-def RDKit_rotate(mol, order, outpath, torsion_quartet):
+def clash(mol, torsion_quartet, cutoff):
     idxr1, idxr2, idxr3, idxr4 = checkbonded(mol, torsion_quartet)
     torsion_quartet_new = f"{idxr1} {idxr2} {idxr3} {idxr4}"
-
     mol.SetProp("TORSION_ATOMS_FRAGMENT", torsion_quartet_new)
+    clash = False
+    for angle in range(-180, 180, 15):
+        rdMolTransforms.SetDihedralDeg(mol.GetConformer(),idxr1,idxr2,idxr3,idxr4,angle)
+        dmat = rdmolops.Get3DDistanceMatrix(mol)
+        for item in dmat[dmat<cutoff]: # cutoff set to <1A here
+            if item!=0:
+                clash = True
+    return clash
+
+def RDKit_rotate(mol, order, outpath, torsion_quartet):
+    idxr1, idxr2, idxr3, idxr4 = checkbonded(mol, torsion_quartet)
+    # torsion_quartet_new = f"{idxr1} {idxr2} {idxr3} {idxr4}"
+    # mol.SetProp("TORSION_ATOMS_FRAGMENT", torsion_quartet_new)
 
     outpath = Path(outpath) / mol.GetProp("_Name")
     if not outpath.exists():
@@ -55,9 +69,14 @@ def RDKit_rotate(mol, order, outpath, torsion_quartet):
 
 
 if True:
-
-    inpath = Path("/pubhome/qcxia02/git-repo/TorsionNet/RDK_torsion/rdkit_Pfrag/outputs/0start")
-    outpath = Path("/pubhome/qcxia02/git-repo/TorsionNet/RDK_torsion/rdkit_Pfrag/outputs/1MMscans")
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--inpath", type=PosixPath, help="absolute path of input fragments")
+    parser.add_argument("--outpath", type=PosixPath, help="absolute path of output fragments")
+    args = parser.parse_args()
+    inpath = args.inpath
+    outpath = args.outpath
+    # inpath = Path("/pubhome/qcxia02/git-repo/TorsionNet/RDK_torsion/rdkit_Pfrag/outputs/0start")
+    # outpath = Path("/pubhome/qcxia02/git-repo/TorsionNet/RDK_torsion/rdkit_Pfrag/outputs/1MMscans")
     if not outpath.exists():
         outpath.mkdir()
     
@@ -66,4 +85,5 @@ if True:
             mols = Chem.SDMolSupplier(str(sdffile), removeHs=False)
             for i, mol in enumerate(mols):
                 torsion_quartet = mol.GetProp("TORSION_ATOMS_FRAGMENT").split()
+                # if not clash(mol, torsion_quartet, cutoff=0.9): # not used because I want more reasonable structures at all angles
                 RDKit_rotate(mol, order = i, outpath = outpath, torsion_quartet = torsion_quartet)

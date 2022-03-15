@@ -1,9 +1,11 @@
 outputs/
 redund/
 tmp/
+logs/
 MMlogs/
 QMlogs/
 *.png
 log
 *.sh
 test.ipynb
+*.csv
