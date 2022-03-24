@@ -9,10 +9,10 @@ from rdkit import Chem
 from ase.units import Hartree, kcal, mol
 
 sys.path.append("/pubhome/qcxia02/git-repo/TorsionNet/RDK_torsion/rdkit_Pfrag/utils")
-from GOutils import sdf2xtbGOinp_xyz, xyz2SPorcainp, xyz2GOorcainp,SPout2energy,GOout2energy
+from GOutils import sdf2xtbGOinp_sdf, sdf2SPorcainp, sdf2GOorcainp,SPout2energy,GOout2energy
 from utils import getsdfchg
 
-# XTBEXE = "/usr/bin/xtb"
+OBABELEXE = "/usr/bin/obabel"
 XTBEXE = "/pubhome/qcxia02/miniconda3/envs/basic/bin/xtb"
 ORCAEXE = "/pubhome/soft/orca/orca_5_openmpi411/orca"
 
@@ -56,10 +56,10 @@ if __name__ == "__main__":
         torsion_quartet_add1 = ",".join(
             list([str(int(idx) + 1) for idx in torsion_quartet.split()])
         )
-        totchg = getsdfchg(sdffile)
+        # totchg = getsdfchg(sdffile)
 
-        with open(xtbGOpath / "name_chg_tor-quartet.csv", 'a') as f:
-            f.write(f"{MMscanpath_sub.name},{totchg},{torsion_quartet}\n")
+        # with open(xtbGOpath / "name_chg_tor-quartet.csv", 'a') as f:
+            # f.write(f"{MMscanpath_sub.name},{totchg},{torsion_quartet}\n")
         #####################f######
 
         outpath = xtbGOpath / MMscanpath_sub.name
@@ -68,12 +68,12 @@ if __name__ == "__main__":
         for sdffile in MMscanpath_sub.iterdir():
             mol = Chem.SDMolSupplier(str(sdffile))[0]
             # prepare input file
-            inpfile = sdf2xtbGOinp_xyz(sdffile, torsion_quartet_add1, outpath)
+            inpfile = sdf2xtbGOinp_sdf(sdffile, torsion_quartet_add1, outpath)
             # run xtb opt
-            os.system(f"{XTBEXE} {inpfile} --opt --gfnff --chrg {totchg}")
+            os.system(f"{XTBEXE} {inpfile} --opt --gfnff")
             # xtboptoutfile = "xtblast.xyz" # xtblast.xyz means sth. wrong with xtb opt
-            xtboptoutfile = "xtbopt.xyz" # xtblast.xyz means sth. wrong with xtb opt
-            xtboptoutfile_rename = sdffile.name + ".opt.xyz"
+            xtboptoutfile = "xtbopt.sdf" # xtblast.xyz means sth. wrong with xtb opt
+            xtboptoutfile_rename = sdffile.name + ".opt.sdf"
             # save optimized xyz
             os.system(f"mv {xtboptoutfile} {outpath/xtboptoutfile_rename}")
             os.system(f"rm xtb* gfn* .xtboptok")
@@ -102,10 +102,10 @@ if __name__ == "__main__":
             outpath.mkdir()
         method = "r2SCAN-3c"
         taskline = f"! {method}\n%pal nprocs 8 end"  # parallel
-        for optxyzfile in xtbGOpath_sub.iterdir():
-            if optxyzfile.name.endswith(".opt.xyz"):
-                inpfile = xyz2SPorcainp(
-                    optxyzfile, taskline, chg=totchg, mult=mult, outpath=outpath
+        for outsdffile in xtbGOpath_sub.iterdir():
+            if outsdffile.name.endswith(".opt.sdf"):
+                inpfile = sdf2SPorcainp(
+                    outsdffile, taskline, chg=totchg, mult=mult, outpath=outpath
                 )
                 outfile = outpath / (inpfile.name + ".log")
                 os.system(f"{ORCAEXE} {inpfile} &> {outfile}")
@@ -134,7 +134,7 @@ if __name__ == "__main__":
         QMoptfiles = []
         # select confs with minimum energy for each angle
         for ang in range(-180, 180, 15):
-            files = list(QMSPpath_sub.glob(f'{subdir}-*_{"%03d" % ang}.sdf.opt.xyz.orcainp.log'))
+            files = list(QMSPpath_sub.glob(f'{subdir}-*_{"%03d" % ang}.sdf.opt.sdf.orcainp.log'))
             energies =  list([ SPout2energy(file) for file in files ])
             minfile = files[energies.index(min(energies))]
             minoptfilename = minfile.name[:-12]
@@ -153,11 +153,11 @@ if __name__ == "__main__":
         taskline = f"! {method} opt\n%pal nprocs 8 end"  # parallel
 
         energies = []
-        # for optxyzfile in xtbGOpath_sub.iterdir():
-        for optxyzfile in QMoptfiles:
-            if optxyzfile.name.endswith(".opt.xyz"):
-                inpfile = xyz2GOorcainp(
-                    optxyzfile,
+        # for optsdffile in xtbGOpath_sub.iterdir():
+        for optsdffile in QMoptfiles:
+            if optsdffile.name.endswith(".opt.sdf"):
+                inpfile = sdf2GOorcainp(
+                    optsdffile,
                     taskline,
                     totchg,
                     mult,
@@ -168,14 +168,15 @@ if __name__ == "__main__":
                 outfile = outpath / (inpfile.name + ".log")
                 os.system(f"{ORCAEXE} {inpfile} &> {outfile}")
                 os.system(
-                    f"rm {outpath / (inpfile.name + '.gbw')} {outpath / (inpfile.name + '_property.txt')} {outpath / (inpfile.name + '.densities')} {outpath / (inpfile.name + '.opt')} {outpath / (inpfile.name + '.engrad')} {outpath / (inpfile.name + '_trj.xyz')}"
+                    # f"rm {outpath / (inpfile.name + '.gbw')} {outpath / (inpfile.name + '_property.txt')} {outpath / (inpfile.name + '.densities')} {outpath / (inpfile.name + '.opt')} {outpath / (inpfile.name + '.engrad')} {outpath / (inpfile.name + '_trj.xyz')}"
+                    f"rm {outpath / (inpfile.name + '.gbw')} {outpath / (inpfile.name + '_property.txt')} {outpath / (inpfile.name + '.densities')} {outpath / (inpfile.name + '.opt')} {outpath / (inpfile.name + '.engrad')}" # not remove trajectory
                 )
             try:
                 energy = GOout2energy(outfile)
                 with open(QMGOpath / "QMGO.csv",'a') as f:
-                    f.write(f"{optxyzfile.name + '.orcainp.xyz'},{energy*Hartree/(kcal/mol)}\n")
+                    f.write(f"{optsdffile.name + '.orcainp.xyz'},{energy*Hartree/(kcal/mol)}\n")
             except UnboundLocalError:
-                print(f"Energy cannot be read from orca out file of {optxyzfile.name}, \nplease check carefully if there are any problems in orca optimization")
+                print(f"Energy cannot be read from orca out file of {optsdffile.name}, \nplease check carefully if there are any problems in orca optimization")
         # 3 Comparison
         # 1) compare different MMscan starting point PES
         # 2) compare MMscan SP-selected and QM opt best

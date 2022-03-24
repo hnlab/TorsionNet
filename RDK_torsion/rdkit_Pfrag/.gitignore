@@ -4,8 +4,10 @@ tmp/
 logs/
 MMlogs/
 QMlogs/
+submit/
 *.png
 log
 *.sh
 test.ipynb
 *.csv
+redock/

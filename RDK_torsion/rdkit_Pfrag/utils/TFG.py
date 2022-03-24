@@ -225,15 +225,16 @@ def CapOpenValenced7(mol, ExpandedTorsion, TorsionQuartet):
     quartet_new = [idxr1, idxr2, idxr3, idxr4]
     return new_mol_mol, quartet_new
 
-def GenStartingConf8(mol, quartet_new, TorsionQuartet, outpath=Path("outputs"), name="test.sdf"):
+def GenStartingConf8(mol, quartet_new, TorsionQuartet, rmsd, numConfs, outpath=Path("outputs"), name="test.sdf"):
     # Get initial 3D structure
     Chem.SanitizeMol(mol)
     Chem.Kekulize(mol)
     mol = Chem.AddHs(mol)
     
+    quartet_old_str = ' '.join([str(idx) for idx in TorsionQuartet])
     quartet_new_str = ' '.join([str(idx) for idx in quartet_new])
     mol.SetProp("_Name", name)
-    mol.SetProp("OLD_TORSION_ATOMS_FRAGMENT", TorsionQuartet)
+    mol.SetProp("OLD_TORSION_ATOMS_FRAGMENT", quartet_old_str)
     mol.SetProp("TORSION_ATOMS_FRAGMENT", quartet_new_str)
 
     # EmbedMolecule(mol) # initial single 3D structure
@@ -242,10 +243,10 @@ def GenStartingConf8(mol, quartet_new, TorsionQuartet, outpath=Path("outputs"), 
     params = ETKDGv3()
     params.numThreads=4
     params.useSmallRingTorsions=True
-    params.pruneRmsThresh=0.1
+    params.pruneRmsThresh=rmsd
     params.clearConfs=True
     
-    cids = EmbedMultipleConfs(mol, numConfs=5, params=params) # 5 confs
+    cids = EmbedMultipleConfs(mol, numConfs=numConfs, params=params) # 5 confs
     MMFFOptimizeMoleculeConfs(mol) # optimize, otherwise failed in xtb opt
     mol_confs = [ mol for cid in cids ]
 
@@ -263,7 +264,7 @@ def GenStartingConf8(mol, quartet_new, TorsionQuartet, outpath=Path("outputs"), 
     return mol
 
 class TorsionFragmentGenerator(object):
-    def __init__(self, mol, outpath, name):
+    def __init__(self, mol, outpath, name, rmsd, numConfs):
         rings = GetRingSystems(mol, includeSpiro=False)  # no spiro ring
         fcgps = [ mol.GetSubstructMatches(Chem.MolFromSmarts(fcgp)) for fcgp in RDK_NCOPS_group_SMARTS_NOS_simplified ]
         fcgp_flatten = []
@@ -297,7 +298,7 @@ class TorsionFragmentGenerator(object):
                 ExpandedTorsion = IncludeH6(mol, ExpandedTorsion)
                 # print(ExpandedTorsion)
                 new_mol, quartet_new = CapOpenValenced7(mol, ExpandedTorsion, TorsionQuartet)
-                new_mol = GenStartingConf8(new_mol, quartet_new, TorsionQuartet, outpath, name + "_" + str(index)) # with 3D structure
+                new_mol = GenStartingConf8(new_mol, quartet_new, TorsionQuartet, rmsd, numConfs, outpath, name + "_" + str(index)) # with 3D structure
 
                 new_mols.append(new_mol)
                 quartet_news.append(quartet_new)

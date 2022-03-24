@@ -50,16 +50,20 @@ def curve_fit(angles,energies,subdir,outpath):
     pred_energies = [func(ang) for ang in probe_angs]
     min_E = min(pred_energies)
     min_ang = probe_angs[pred_energies.index(min_E)]
-
-    res = minimize(func,min_ang) # min_ang is the initial guess (as local minimum)
-    # other options:
-    # method: If not given, chosen to be one of BFGS, L-BFGS-B, SLSQP, depending on whether or not the problem has constraints or bounds.
-
-    # But actually, because of the step of constrain but not fix in xtb optimization step,
-    # There should be error which cannot be cancelled by minimization
-    if res.success:
-        min_ang = res.x[0] # min_ang
-        min_E = res.fun # min_energy
+    print(min_ang)
+    try:
+        res = minimize(func,min_ang) # min_ang is the initial guess (as local minimum)
+        # other options:
+        # method: If not given, chosen to be one of BFGS, L-BFGS-B, SLSQP, depending on whether or not the problem has constraints or bounds.
+    
+        # But actually, because of the step of constrain but not fix in xtb optimization step,
+        # There should be error which cannot be cancelled by minimization
+        if res.success:
+            min_ang = res.x[0] # min_ang
+            min_E = res.fun # min_energy
+    except ValueError: # in case out of range(-180, 180)
+        min_ang = min_ang
+        min_E = min_E
 
     rel_E = energies - min_E
 
@@ -114,6 +118,7 @@ if __name__ == "__main__":
     if not outqmfuncpath_sub.exists():
         outqmfuncpath_sub.mkdir()
 
+    print(f">>> Dealing with {subdir}")
     xtboptmols, QMoptmols = [], []
     onegroupsdf = MMscanpath_sub.glob("*-1_*.sdf")
     lines = (QMGOpath/"QMGO.csv").read_text().split("\n")
@@ -123,6 +128,7 @@ if __name__ == "__main__":
             name = line.split(",")[0].split(".opt.xyz.orcainp.xyz")[0]
             wholegroupsdf.append(MMscanpath_sub / name)
 
+    """
     for sdffile in onegroupsdf:
     # for out
         mol = Chem.SDMolSupplier(str(sdffile), removeHs=False)[0]
@@ -167,6 +173,7 @@ if __name__ == "__main__":
         # for mol in QMoptmols:
             # if mol.GetProp("TORSION_ANGLE") == str(ang):
                 # writer.write(mol)
+    """
     
     angs, QMopt_Es = [], []
     if len(wholegroupsdf) == 24:
@@ -175,6 +182,8 @@ if __name__ == "__main__":
 
             # xtboptoutxyz = xtbGOpath_sub / (sdffile.name + ".opt.xyz")
             QMoptoutxyz = QMGOpath_sub / (sdffile.name + ".opt.xyz.orcainp.xyz")
+            if not QMoptoutxyz.exists():
+                QMoptoutxyz = QMGOpath_sub / (sdffile.name + ".opt.sdf.orcainp.xyz")
 
             ang = int(sdffile.name.split(".sdf")[0].split("_")[-1])
             angs.append(ang)
@@ -186,6 +195,8 @@ if __name__ == "__main__":
 
             # xtboptoutElog = QMSPpath_sub / (sdffile.name + ".opt.xyz.orcainp.log")
             QMoptoutElog = QMGOpath_sub / (sdffile.name + ".opt.xyz.orcainp.log")
+            if not QMoptoutElog.exists():
+                QMoptoutElog = QMGOpath_sub / (sdffile.name + ".opt.sdf.orcainp.log")
 
             # xtbopt_E = SPout2energy(xtboptoutElog) * Hartree / kcalmol
             QMopt_E = GOout2energy(QMoptoutElog) * Hartree / kcalmol
@@ -222,6 +233,11 @@ if __name__ == "__main__":
         E = np.array([q[1] for q in sorted_by_ang], dtype=float)
         E = np.append(E, E[0])
         curve_fit(ANG, E, subdir, outqmfuncpath_sub)
-        
+    
     else:
         print(f"something wrong with {subdir}, take care!")
+
+    # print(QMopt_Es)
+    print(f">>> Finished with {subdir}")
+    print()
+    

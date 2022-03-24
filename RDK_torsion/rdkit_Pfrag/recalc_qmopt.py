@@ -9,7 +9,7 @@ from rdkit import Chem
 from ase.units import Hartree, kcal, mol
 
 sys.path.append("/pubhome/qcxia02/git-repo/TorsionNet/RDK_torsion/rdkit_Pfrag/utils")
-from GOutils import sdf2xtbGOinp, xyz2SPorcainp, xyz2GOorcainp,SPout2energy,GOout2energy
+from GOutils import sdf2GOorcainp, xyz2GOorcainp,SPout2energy,GOout2energy
 from utils import getsdfchg
 
 # XTBEXE = "/usr/bin/xtb"
@@ -55,7 +55,7 @@ if __name__ == "__main__":
     QMoptfiles = []
     # select confs with minimum energy for each angle
     ang = int(args.angle)
-    files = list(QMSPpath_sub.glob(f'{subdir}-*_{"%03d" % ang}.sdf.opt.xyz.orcainp.log'))
+    files = list(QMSPpath_sub.glob(f'{subdir}-*_{"%03d" % ang}.sdf.opt.sdf.orcainp.log'))
     energies =  list([ SPout2energy(file) for file in files ])
     minfile = files[energies.index(min(energies))]
     minoptfilename = minfile.name[:-12]
@@ -75,19 +75,20 @@ if __name__ == "__main__":
     taskline = f"! {method} opt KDIIS NOSOSCF\n%pal nprocs 8 end"  # parallel
     # turn on KDIIS will turn off the default DIIS at the same time, so there is no need to write NODIIS
 
-
+    maxcycles = 200
     energies = []
     # for optxyzfile in xtbGOpath_sub.iterdir():
-    for optxyzfile in QMoptfiles:
-        if optxyzfile.name.endswith(".opt.xyz"):
-            inpfile = xyz2GOorcainp(
-                optxyzfile,
+    for optsdffile in QMoptfiles:
+        if optsdffile.name.endswith(".opt.sdf"):
+            inpfile = sdf2GOorcainp(
+                optsdffile,
                 taskline,
                 totchg,
                 mult,
                 True,
                 outpath,
                 torsion_quartet,
+                maxcycles
             )
             outfile = outpath / (inpfile.name + ".log")
             os.system(f"{ORCAEXE} {inpfile} &> {outfile}")
@@ -98,6 +99,6 @@ if __name__ == "__main__":
         try:
             energy = GOout2energy(outfile)
             with open(QMGOpath / "QMGO.csv",'a') as f:
-                f.write(f"{optxyzfile.name + '.orcainp.xyz'},{energy*Hartree/(kcal/mol)}\n")
+                f.write(f"{optsdffile.name + '.orcainp.xyz'},{energy*Hartree/(kcal/mol)}\n")
         except UnboundLocalError:
-            print(f"Energy cannot be read from orca out file of {optxyzfile.name}, \nplease check carefully if there are any problems in orca optimization")
+            print(f"Energy cannot be read from orca out file of {optsdffile.name}, \nplease check carefully if there are any problems in orca optimization")
