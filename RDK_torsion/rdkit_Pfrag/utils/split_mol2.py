@@ -21,8 +21,9 @@ def next_mol2_lines(infile):
     yield lines
 
 if __name__ == "__main__":
-    # mol2file = sys.argv[1]
-    mol2file = "/pubhome/qcxia02/Downloads/dataset/ShuoGu/AmpC.mol2"
+    mol2file = sys.argv[1]
+    # mol2file = "/pubhome/qcxia02/Downloads/dataset/ShuoGu/AmpC.mol2"
+    # 1. for mol2gz
     multi_mol2lines = next_mol2_lines(mol2file)
     multi_mol2lines = list(multi_mol2lines)[1:]
     for mol2lines in multi_mol2lines:

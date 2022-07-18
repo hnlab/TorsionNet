@@ -60,7 +60,7 @@ def curve_fit(angles,energies,subdir,outpath):
         # There should be error which cannot be cancelled by minimization
         if res.success:
             min_ang = res.x[0] # min_ang
-            min_E = res.fun # min_energy
+            min_E = res.fun if not isinstance(res.fun, list) else res.fun[0]# min_energy
     except ValueError: # in case out of range(-180, 180)
         min_ang = min_ang
         min_E = min_E
@@ -68,7 +68,7 @@ def curve_fit(angles,energies,subdir,outpath):
     rel_E = energies - min_E
 
     plt.figure(figsize=(14, 12), dpi=80)
-    plt.plot(ANG, rel_E, color="black", marker="o", label="calculation")
+    plt.plot(angles, rel_E, color="black", marker="o", label="calculation")
     plt.plot(probe_angs, np.array([ func(ang) for ang in probe_angs ]) - min_E, color = "blue", marker = "^", label="fitted curve")
     font1 = {"family": "Helvetica", "weight": "normal", "size": 30}
     font2 = {"family": "Helvetica", "weight": "normal", "size": 23}
@@ -88,13 +88,14 @@ def curve_fit(angles,energies,subdir,outpath):
         f.write(f"{min_ang},{min_E}\n")
 
 
-if __name__ == "__main__":
+# if __name__ == "__main__":
+if True:
     parser = argparse.ArgumentParser("write new coords to sdf file")
     parser.add_argument("--rootpath", type=PosixPath, help="absolute path for rootpath")
     parser.add_argument("--subdir", type=str, help="name of subdir")
     args = parser.parse_args()
 
-    # rootpath = Path("/pubhome/qcxia02/git-repo/TorsionNet/RDK_torsion/rdkit_Pfrag/outputs")
+    # rootpath = Path("/pubhome/qcxia02/git-repo/TorsionNet/RDK_torsion/rdkit_Pfrag/outputs/ShuoGu_D4_256")
     rootpath = args.rootpath
     startpath = rootpath / "0start"
     MMscanpath = rootpath / "1MMscans"
@@ -125,7 +126,8 @@ if __name__ == "__main__":
     wholegroupsdf = []
     for line in lines:
         if re.search(subdir, line):
-            name = line.split(",")[0].split(".opt.xyz.orcainp.xyz")[0]
+            # name = line.split(",")[0].split(".opt.sdf.orcainp.xyz")[0]
+            name = line.split(",")[0].split(".opt.sdf.orcainp.orcainp.xyz")[0]
             wholegroupsdf.append(MMscanpath_sub / name)
 
     """

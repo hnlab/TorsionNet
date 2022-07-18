@@ -72,6 +72,7 @@ if True:
     parser = argparse.ArgumentParser()
     parser.add_argument("--inpath", type=PosixPath, help="absolute path of input fragments")
     parser.add_argument("--outpath", type=PosixPath, help="absolute path of output fragments")
+    parser.add_argument("--torsionquartet", nargs="+", help="set torsion quartet manually")
     args = parser.parse_args()
     inpath = args.inpath
     outpath = args.outpath
@@ -84,6 +85,11 @@ if True:
         if sdffile.name.endswith(".sdf"):
             mols = Chem.SDMolSupplier(str(sdffile), removeHs=False)
             for i, mol in enumerate(mols):
-                torsion_quartet = mol.GetProp("TORSION_ATOMS_FRAGMENT").split()
+                try:
+                    torsion_quartet = mol.GetProp("TORSION_ATOMS_FRAGMENT").split()
+                except:
+                    if args.torsionquartet:
+                        torsion_quartet = [int(i) for i in args.torsionquartet]
+                print(torsion_quartet)
                 # if not clash(mol, torsion_quartet, cutoff=0.9): # not used because I want more reasonable structures at all angles
                 RDKit_rotate(mol, order = i, outpath = outpath, torsion_quartet = torsion_quartet)

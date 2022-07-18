@@ -146,6 +146,35 @@ def sdf2GOorcainp(sdffile, taskline, chg, mult, constrained=False, outpath="", *
     Path(orcainpfile).write_text(lines)
     return Path(orcainpfile)
 
+def SPorcainp2GOorcainp(SPorcainp, taskline, constrained=False, outpath="", *args):
+    """
+    ::input: SPorcainp (should be absolute path)
+    """
+    GOorcainpfile = SPorcainp if not outpath else str(Path(outpath) / Path(SPorcainp).name)
+    lines = Path(SPorcainp).read_text().split("\n")
+    maxcycles = None # None means default 3N
+    if constrained:
+        if len(args) == 1:
+            torsion_quartet = args[0]
+            
+        if len(args) == 2:
+            torsion_quartet = args[0]
+            maxcycles = args[1]
+    
+        print("Constrained Optimization is Turned On.")
+        orca_torsionatoms = torsion_quartet
+        if maxcycles == None:
+            constrain_lines = "%geom\nConstraints\n"+"{D " + orca_torsionatoms +" C}\n" + "end\n" + "end\n"
+        else:
+            constrain_lines = "%geom\nMaxIter " + str(maxcycles) + "\nConstraints\n"+"{D " + orca_torsionatoms +" C}\n" + "end\n" + "end\n"
+    else:
+        print("Constrained Optimization is Turned Off.")
+
+    lines = "\n".join(lines[:2]) + "\n" + taskline + constrain_lines + "\n".join(lines[4:])
+    Path(GOorcainpfile).write_text(lines)
+    return Path(GOorcainpfile)
+
+
 def SPout2energy(orcaoutfile):
     """
     Specifically for SP out file

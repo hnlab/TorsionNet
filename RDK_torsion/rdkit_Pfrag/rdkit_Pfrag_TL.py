@@ -8,7 +8,7 @@ from rdkit import Chem
 from rdkit.Chem import Draw
 
 sys.path.append("/pubhome/qcxia02/git-repo/TorsionNet/RDK_torsion/rdkit_Pfrag/utils")
-from TFG import TorsionFragmentGenerator
+from TFG_TL import TorsionFragmentGenerator_TL
 
 
 if True:
@@ -29,7 +29,6 @@ if True:
 
     # mol = Chem.MolFromSmiles("COc3ccc(C)c(C(C)NC(=O)Nc2nc(c1ccncc1)cs2)c3C")
     # mol = Chem.SDMolSupplier(args.sdf, removeHs = False)[0]
-    # mol2file = "/pubhome/qcxia02/git-repo/DL4molcst/scripts/dock_models/3-conf-docks/results/AmpC/compounds/mol2mols/mol2mols/cpds.binders.0.101.mol2"
     mol2file = args.mol2
     sdffile = args.sdf
     outpath = args.outpath
@@ -59,25 +58,21 @@ if True:
             uniconpath = outpath / "uniconed"
             os.system(f"mkdir {uniconpath}")
             newmol2file = str(uniconpath / (Path(mol2file).name + ".uniconed" + ".mol2"))
-            os.system(f"unicon -i {mol2file} --inFormat mol2 --from 0 --to 1 -t topscoring  -p topscoring -m 1  --hydrogens -o {newmol2file} --outFormat mol2") # only take and deal with the first one
-            # os.system(f"unicon -i {mol2file} -t single -p single -m 1  --hydrogens -o {newmol2file}")
+            os.system(f"unicon -i {mol2file} -t topscoring  -p topscoring -m 1  --hydrogens -o {newmol2file}")
 
             mol = Chem.MolFromMol2File(newmol2file, sanitize = False, removeHs = False) # readfile
             molname = Path(mol2file).name[:-5]
         else:
-            mol = Chem.MolFromMol2File(mol2file, sanitize = False, removeHs = False) # readfile
+            # mol = Chem.MolFromMol2File(mol2file, sanitize = False, removeHs = False) # readfile
+            mol = Chem.MolFromMol2File(mol2file, removeHs = False) # readfile, sanitize=True
             molname = Path(mol2file).name[:-5]
 
     print(f">>>>>> Dealing with {molname} <<<<<<")
 
-    mol = Chem.MolFromSmiles(Chem.MolToSmiles(mol)) # canonicalize
-    Chem.SanitizeMol(mol)
-    Chem.Kekulize(mol, clearAromaticFlags=True) # To bypass complex Kekulize Error
-    mol = Chem.AddHs(mol)
-
     ### OUTPUT .sdf molecules will be saved in outpath dir at current working directory
-    TF = TorsionFragmentGenerator(mol, outpath=outpath, name=molname, rmsd=rmsd, numConfs=numConfs) # This name is the prefix for output SDF mol
-    # TF = TorsionFragmentGenerator(mol, outpath="outputs", name="test") # This name is the prefix for output SDF mol
+    # TFG_TL.py no canonicalize step
+    TF = TorsionFragmentGenerator_TL(mol, outpath=outpath, name=molname, rmsd=rmsd, numConfs=numConfs) # This name is the prefix for output SDF mol
+    # TF = TorsionFragmentGenerator_TL(mol, outpath="outputs", name="test") # This name is the prefix for output SDF mol
 
 
     new_mols = TF.mols

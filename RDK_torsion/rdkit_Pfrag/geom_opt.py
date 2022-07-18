@@ -7,9 +7,9 @@ from pathlib import Path, PosixPath
 
 from rdkit import Chem
 from ase.units import Hartree, kcal, mol
-
+molunit = mol
 sys.path.append("/pubhome/qcxia02/git-repo/TorsionNet/RDK_torsion/rdkit_Pfrag/utils")
-from GOutils import sdf2xtbGOinp_sdf, sdf2SPorcainp, sdf2GOorcainp,SPout2energy,GOout2energy
+from GOutils import sdf2xtbGOinp_sdf, sdf2SPorcainp, sdf2GOorcainp,SPout2energy,GOout2energy, SPorcainp2GOorcainp
 from utils import getsdfchg
 
 OBABELEXE = "/usr/bin/obabel"
@@ -24,6 +24,8 @@ if __name__ == "__main__":
     parser.add_argument("--MMopt", action="store_true", default=False, help="trigger MM optimization")
     parser.add_argument("--QMSP", action="store_true", default=False, help="trigger QM single point")
     parser.add_argument("--QMopt", action="store_true", default=False, help="trigger QM optimization")
+    parser.add_argument("--torsionquartet", nargs="+", help="set torsion quartet manually")
+    parser.add_argument("--method", type=str, help="QM level, e.g. 'B3LYP def2-SVP",default="r2SCAN-3c")
     args = parser.parse_args()
 
     # rootpath = Path("/pubhome/qcxia02/git-repo/TorsionNet/RDK_torsion/rdkit_Pfrag/outputs")
@@ -52,7 +54,13 @@ if __name__ == "__main__":
         ## get info from sdffile ##
         sdffile = MMscanpath / MMscanpath_sub / (MMscanpath_sub.name + "-1_000.sdf")
         mol = Chem.SDMolSupplier(str(sdffile))[0]
-        torsion_quartet = mol.GetProp("TORSION_ATOMS_FRAGMENT")
+        try:
+            torsion_quartet = mol.GetProp("TORSION_ATOMS_FRAGMENT")
+        except:
+            print("!Notion: using manually given torsion quartet")
+            if args.torsionquartet:
+                torsion_quartet = " ".join(args.torsionquartet)
+
         torsion_quartet_add1 = ",".join(
             list([str(int(idx) + 1) for idx in torsion_quartet.split()])
         )
@@ -93,14 +101,24 @@ if __name__ == "__main__":
         xtbGOpath_sub = xtbGOpath / subdir
         sdffile = MMscanpath / MMscanpath_sub / (MMscanpath_sub.name + "-1_000.sdf")
         mol = Chem.SDMolSupplier(str(sdffile))[0]
-        torsion_quartet = mol.GetProp("TORSION_ATOMS_FRAGMENT")
+
+        try:
+            torsion_quartet = mol.GetProp("TORSION_ATOMS_FRAGMENT")
+        except:
+            print("!Notion: using manually given torsion quartet")
+            if args.torsionquartet:
+                torsion_quartet = " ".join(args.torsionquartet)
+
         totchg = getsdfchg(str(sdffile))
         mult = 1
 
         outpath = QMSPpath / MMscanpath_sub.name
         if not outpath.exists():
             outpath.mkdir()
-        method = "r2SCAN-3c"
+        # method = "r2SCAN-3c"
+        # method = "B3LYP def2-SVP"
+        method = args.method
+
         taskline = f"! {method}\n%pal nprocs 8 end"  # parallel
         for outsdffile in xtbGOpath_sub.iterdir():
             if outsdffile.name.endswith(".opt.sdf"):
@@ -127,56 +145,79 @@ if __name__ == "__main__":
         xtbGOpath_sub = xtbGOpath / subdir
         sdffile = MMscanpath / MMscanpath_sub / (MMscanpath_sub.name + "-1_000.sdf")
         mol_ = Chem.SDMolSupplier(str(sdffile))[0]
-        torsion_quartet = mol_.GetProp("TORSION_ATOMS_FRAGMENT")
+
+        try:
+            torsion_quartet = mol_.GetProp("TORSION_ATOMS_FRAGMENT")
+        except:
+            print("!Notion: using manually given torsion quartet")
+            if args.torsionquartet:
+                torsion_quartet = " ".join(args.torsionquartet)
+
         totchg = getsdfchg(str(sdffile))
         mult = 1
 
-        QMoptfiles = []
+        # MMoptfiles = []
+        QMSPfiles = []
         # select confs with minimum energy for each angle
         for ang in range(-180, 180, 15):
             files = list(QMSPpath_sub.glob(f'{subdir}-*_{"%03d" % ang}.sdf.opt.sdf.orcainp.log'))
             energies =  list([ SPout2energy(file) for file in files ])
             minfile = files[energies.index(min(energies))]
-            minoptfilename = minfile.name[:-12]
-
+            # minoptfilename = minfile.name[:-12]
+            minspfile = minfile.name[:-4]
             with open(QMGOpath / "QMSP.csv",'a') as f:
                 for i in range(len(files)):
-                    f.write(f"{files[i].name},{energies[i]*Hartree/(kcal/mol)}\n")
+                    f.write(f"{files[i].name},{energies[i]*Hartree/(kcal/molunit)}\n")
             
-            QMoptfiles.append(xtbGOpath / subdir / minoptfilename)
+            # MMoptfiles.append(xtbGOpath / subdir / minoptfilename)
+            QMSPfiles.append(QMSPpath / subdir / minspfile)
+
 
         outpath = QMGOpath / MMscanpath_sub.name
         if not outpath.exists():
             outpath.mkdir()
 
-        method = "r2SCAN-3c"
+        # method = "r2SCAN-3c"
+        # method = "B3LYP def2-SVP"
+        method=args.method
         taskline = f"! {method} opt\n%pal nprocs 8 end"  # parallel
 
         energies = []
-        # for optsdffile in xtbGOpath_sub.iterdir():
-        for optsdffile in QMoptfiles:
-            if optsdffile.name.endswith(".opt.sdf"):
-                inpfile = sdf2GOorcainp(
-                    optsdffile,
-                    taskline,
-                    totchg,
-                    mult,
-                    True,
-                    outpath,
-                    torsion_quartet,
-                )
-                outfile = outpath / (inpfile.name + ".log")
-                os.system(f"{ORCAEXE} {inpfile} &> {outfile}")
-                os.system(
-                    # f"rm {outpath / (inpfile.name + '.gbw')} {outpath / (inpfile.name + '_property.txt')} {outpath / (inpfile.name + '.densities')} {outpath / (inpfile.name + '.opt')} {outpath / (inpfile.name + '.engrad')} {outpath / (inpfile.name + '_trj.xyz')}"
-                    f"rm {outpath / (inpfile.name + '.gbw')} {outpath / (inpfile.name + '_property.txt')} {outpath / (inpfile.name + '.densities')} {outpath / (inpfile.name + '.opt')} {outpath / (inpfile.name + '.engrad')}" # not remove trajectory
-                )
+        # for optsdffile in QMSPfiles:
+        for qmspfile in QMSPfiles:
+            # if optsdffile.name.endswith(".opt.sdf"):
+            # inpfile = sdf2GOorcainp(
+                # optsdffile,
+                # taskline,
+                # totchg,
+                # mult,
+                # True,
+                # outpath,
+                # torsion_quartet,
+            # )
+
+            inpfile = SPorcainp2GOorcainp(
+                qmspfile,
+                taskline,
+                True,
+                outpath,
+                torsion_quartet,
+            )
+
+            outfile = outpath / (inpfile.name + ".log")
+            os.system(f"{ORCAEXE} {inpfile} &> {outfile}")
+            os.system(
+                # f"rm {outpath / (inpfile.name + '.gbw')} {outpath / (inpfile.name + '_property.txt')} {outpath / (inpfile.name + '.densities')} {outpath / (inpfile.name + '.opt')} {outpath / (inpfile.name + '.engrad')} {outpath / (inpfile.name + '_trj.xyz')}"
+                f"rm {outpath / (inpfile.name + '.gbw')} {outpath / (inpfile.name + '_property.txt')} {outpath / (inpfile.name + '.densities')} {outpath / (inpfile.name + '.opt')} {outpath / (inpfile.name + '.engrad')}" # not remove trajectory
+            )
             try:
                 energy = GOout2energy(outfile)
                 with open(QMGOpath / "QMGO.csv",'a') as f:
-                    f.write(f"{optsdffile.name + '.orcainp.xyz'},{energy*Hartree/(kcal/mol)}\n")
+                    # f.write(f"{optsdffile.name + '.orcainp.xyz'},{energy*Hartree/(kcal/molunit)}\n")
+                    f.write(f"{qmspfile.name + '.orcainp.xyz'},{energy*Hartree/(kcal/molunit)}\n")
+
             except UnboundLocalError:
-                print(f"Energy cannot be read from orca out file of {optsdffile.name}, \nplease check carefully if there are any problems in orca optimization")
+                print(f"Energy cannot be read from orca out file of {qmspfile.name}, \nplease check carefully if there are any problems in orca optimization")
         # 3 Comparison
         # 1) compare different MMscan starting point PES
         # 2) compare MMscan SP-selected and QM opt best

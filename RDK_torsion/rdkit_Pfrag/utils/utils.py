@@ -49,6 +49,13 @@ def findneighbour(mol, idxr) -> list:
 
     return neigh_idxr
 
+def findneighbourH(mol,idxr) -> list:
+    atom = mol.GetAtomWithIdx(idxr)  # Atoms: c(harged)atom
+    neighbours = atom.GetNeighbors()  # list of Atoms: neighbour atoms of catom
+    neighH_idxr = [
+        x.GetIdx() for x in neighbours
+    ]  # list of int: idxes of neighbours, include hydrogens
+
 
 def neutralize_atoms(mol):
     # Neutralize molecules for each charged atom
