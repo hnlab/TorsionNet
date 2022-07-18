@@ -1,4 +1,6 @@
-import sys
+"""
+Note that TFG_TL.py does not need canonicalization, so I turned them off - 2022/05/27
+"""
 import sys
 import copy
 import pandas as pd
@@ -11,7 +13,9 @@ from rdkit.Chem.rdMolTransforms import GetDihedralDeg,SetDihedralDeg
 
 sys.path.append("/pubhome/qcxia02/git-repo/TorsionNet/RDK_torsion/rdkit_Pfrag/utils")
 # from utils import GetRingSystems, findneighbour, Get_sorted_heavy
-from TFG import GetTorsion0, GetQuartetAtoms1
+# from TFG import GetTorsion0, GetQuartetAtoms1
+# from TFG_TL import GetTorsionQuartet01
+from TFG_TEU import GetTorsionQuartet01
 
 def getdihedralangle(mol, torsionquartet):
     idxr1, idxr2, idxr3, idxr4 = torsionquartet
@@ -65,7 +69,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser("calc_strain")
     input_group = parser.add_mutually_exclusive_group(required=True)
     input_group.add_argument('--mol2', type=str, help="Absolute path of Mol2 file to gererate conformers for")
-    input_group.add_argument('--sdf', type=str, help="Absolute path of Mol2 file to gererate conformers for")
+    input_group.add_argument('--sdf', type=str, help="Absolute path of SDF file to gererate conformers for")
     input_group.add_argument('--smiles', type=str, help="SMILES string of molecule")
     parser.add_argument("--rootpath", type=PosixPath, help="absolute path of rootpath of study", required=True)
     args = parser.parse_args()
@@ -109,11 +113,13 @@ if __name__ == "__main__":
     ##########################
 
     ## read func and energy ##
-    targetpath = list(outfuncpath.glob(f"{prefix}*"))
+    # targetpath = list(outfuncpath.glob(f"{prefix}*"))
+    targetpath = list(outfuncpath.glob(f"{prefix}_*")) #  to avoid extra mismatch
     # print(targetpath)
-    funcs, minangles, minEs = [],[],[]
-    for i in range(len(targetpath)):
-        subname = prefix + f"_{i}"
+    funcdict = {}
+    for subname in targetpath:
+        index = int(subname.name.split("_")[-1])
+        subname = subname.name
         with open(outfuncpath / subname / f"{subname}.func.pkl", 'rb') as f:
             func = pickle.load(f)
         with open(outfuncpath / subname / f"{subname}.min.csv", 'r') as f:
@@ -121,32 +127,46 @@ if __name__ == "__main__":
         minangle = float(lines[0].strip().split(",")[0])
         minE = float(lines[0].strip().split(",")[1])
 
-        funcs.append(func)
-        minangles.append(minangle)
-        minEs.append(minE)
+        funcdict[index] = {
+            "func": func,
+            "minangle": minangle,
+            "minE": minE
+        }
+        TorsionStrains = []
     ##########################
 
     new_order = list(range(len(canonical_mol.GetAtoms())))
     if len(raw_order) == len(new_order):
+    # if True:
         new_raw_mapping = dict(zip(new_order, raw_order))
 
-        torsions = GetTorsion0(canonical_mol)
-        TorsionQuartets_ = [ GetQuartetAtoms1(canonical_mol, torsion) for torsion in torsions ]
+        # torsions = GetTorsion0(canonical_mol)
+        # TorsionQuartets_ = [ GetQuartetAtoms1(canonical_mol, torsion) for torsion in torsions ]
+        # _, _, TorsionQuartets_ = GetTorsionQuartet01(mol)
+        TorsionQuartets_, _ = GetTorsionQuartet01(mol)
         TorsionQuartets =  removeNone(TorsionQuartets_)
         print(TorsionQuartets)
-        raw_TorsionQuartets = [[ new_raw_mapping[index] for index in TorsionQuartet ] for TorsionQuartet in TorsionQuartets]
-        print(raw_TorsionQuartets)
+        raw_TorsionQuartets = TorsionQuartets
+        # raw_TorsionQuartets = [[ new_raw_mapping[index] for index in TorsionQuartet ] for TorsionQuartet in TorsionQuartets]
+        # print(raw_TorsionQuartets)
         TorsionAngles = [getdihedralangle(mol, raw_TorsionQuartets[i]) for i in range(len(raw_TorsionQuartets))]
         print(TorsionAngles)
-        TorsionStrains = [calc_torsion(mol, raw_TorsionQuartets[i], funcs[i], minEs[i]) for i in range(len(raw_TorsionQuartets))]
+        # TorsionStrains = [calc_torsion(mol, raw_TorsionQuartets[i], funcs[i], minEs[i]) for i in range(len(raw_TorsionQuartets))]
+        for i in range(len(raw_TorsionQuartets)):
+            try:
+                TorsionStrain = calc_torsion(mol, raw_TorsionQuartets[i], funcdict[i]["func"], funcdict[i]["minE"])
+                TorsionStrains.append(TorsionStrain)
+            except KeyError:
+                TorsionStrains.append(0)
         print(TorsionStrains)
-        with open("summary.csv",'a') as f:
+
+        with open(args.rootpath / "summary.csv",'a') as f:
             f.write(f"{prefix}\t{'%.2f' % sum(TorsionStrains)}\t{'%.2f' % max(TorsionStrains)}\n")
         print(sum(TorsionStrains))
         print(max(TorsionStrains))
         mol_ = copy.deepcopy(mol)
         write_probe_mol(mol_, raw_TorsionQuartets, TorsionAngles, outprobemolpath, prefix, TorsionStrains)
-        write_best_mol(mol_, raw_TorsionQuartets, minangles, outbestmolpath, prefix)
+        # write_best_mol(mol_, raw_TorsionQuartets, minangles, outbestmolpath, prefix)
 
     else:
         print("something wrong! please check!")
