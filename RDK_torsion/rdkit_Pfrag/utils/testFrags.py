@@ -15,6 +15,7 @@ The OEGetFuncGroupFragments function uses the following heuristics to fragment a
 """
 
 RDK_NCOPS_group_SMARTS_NOS_simplified = [
+    "c=O", # for enolate, added by qcxia
     "[CX3]=[OX1]",   # fr_C=O
     "[C!$(C=O)]-[OH]",  # fr_Al_OH
     "c[OH1]", # fr_Ar_OH
@@ -120,3 +121,63 @@ RDK_NCOPS_group_SMARTS_most = [
     "[$(P(=[OX1])([$([OX2H]),$([OX1-]),$([OX2]P)])([$([OX2H]),$([OX1-]),$([OX2]P)])[$([OX2H]),$([OX1-]),$([OX2]P)]),$([P+]([OX1-])([$([OX2H]),$([OX1-]),$([OX2]P)])([$([OX2H]),$([OX1-]),$([OX2]P)])[$([OX2H]),$([OX1-]),$([OX2]P)])]",
     "[$(P(=[OX1])([OX2][#6])([$([OX2H]),$([OX1-]),$([OX2][#6])])[$([OX2H]),$([OX1-]),$([OX2][#6]),$([OX2]P)]),$([P+]([OX1-])([OX2][#6])([$([OX2H]),$([OX1-]),$([OX2][#6])])[$([OX2H]),$([OX1-]),$([OX2][#6]),$([OX2]P)])]",
 ]
+
+
+# Mainly COPS acid, including N-related groups
+# Some cannot be read may due to format incompatibility between RDKit and Omega
+raw_ChayaSt_fragmentation = [
+    "[NX3][NX3]",   # hydrazine
+    "[NX3][NX2]",   # hydrazone
+    "[N]-[O]",   # nitric oxide
+    "[#7][#6](=[#8])", # amide
+    "[#7][#6](-[O-])",   # amide
+    "[NX3][CX3](=[OX1])[NX3]",   # urea
+    "[CX3H1](=O)[#6]",   # aldehyde
+    "[#16X3]=[OX1]", # sulfoxide
+    "[#16X3+][OX1-]", # sulfoxide
+    "[#16X4](=[OX1])=([OX1])",   # sulfonyl
+    "[#16X3](=[OX1])[OX2H,OX1H0-]",   # sulfinic acid
+    "[#16X4](=[OX1])=([OX1])([NX3R0])",   # sulfinamide
+    "[#16X4](=[OX1])(=[OX1])[OX2H,OX1H0-]",   # sulfonic acid
+    "[PX4](=[OX1])([#6])([#6])([#6])",   # phosphine oxide
+    "P(=[OX1])([OX2H,OX1-])([OX2H,OX1-])",   # phosphonate
+    "[PX4](=[OX1])([#8])([#8])([#8])",   # phosphate
+    "[CX3](=O)[OX1H0-,OX2H1]",   # carboxylic acid
+    "([NX3+](=O)[O-])", # nitro
+    "([NX3](=O)=O)",   # nitro
+    "[CX3](=O)[OX2H0]",   # ester
+    "[#6]((([F,Cl,I,Br])[F,Cl,I,Br])[F,Cl,I,Br])",  # tri-halides
+]
+
+
+ChayaSt_fragmentation = [
+    "[NX3]-[NX3]",   # hydrazine
+    "[NX3]-[NX2]",   # hydrazone
+    "[N]-[O]",   # nitric oxide
+    "[#7]-[#6](=[#8])", # amide
+    "[#7]=[#6](-[O-])",   # amide
+    "[NX3]-[CX3](=[OX1])-[NX3]",   # urea
+    "[CX3H1](=O)-[#6]",   # aldehyde
+    "[#16X3]=[OX1]", # sulfoxide
+    "[#16X3+]-[OX1-]", # sulfoxide
+    "[#16X4](=[OX1])=[OX1]",   # sulfonyl
+    "[#16X3](=[OX1])-[OX2H]",   # sulfinic acid
+    "[#16X3](=[OX1])-[OX1H0-]",   # sulfinic acid
+    "[NX3R0]-[#16X4](=[OX1])=[OX1]",   # sulfinamide
+    "[#16X4](=[OX1])(=[OX1])-[OX2H]",   # sulfonic acid
+    "[#16X4](=[OX1])(=[OX1])-[OX1H0-]",   # sulfonic acid
+    "[PX4](=[OX1])(-[#6])(-[#6])(-[#6])",   # phosphine oxide
+    "P(=[OX1])(-[OX2H])(-[OX2H])",   # phosphonate
+    "P(=[OX1])(-[OX2H])(-[OX1-])",   # phosphonate
+    "P(=[OX1])(-[OX1-])(-[OX2H])",   # phosphonate
+    "P(=[OX1])(-[OX1-])(-[OX1-])",   # phosphonate
+    "[PX4](=[OX1])(-[#8])(-[#8])(-[#8])",   # phosphate
+    "[CX3](=O)-[OX1H0-]",   # carboxylic acid
+    "[CX3](=O)-[OX2H1]",   # carboxylic acid
+    "[NX3+](=O)-[O-]", # nitro
+    "[NX3](=O)=O",   # nitro
+    "[CX3](=O)-[OX2H0]",   # ester
+    "[CX3]=[OX1]",   # fr_C=O, added by qcxia at 2022/07/17 to solve aromaticity problem
+    "c=O",   # Ar c=O, also added by qcxia at 2022/07/17 to solve aromaticity problem
+
+] + [ f"[#6](-[{i}])(-[{j}])-[{k}]" for i in ["F", "Cl", "Br", "I"] for j in ["F", "Cl", "Br", "I"] for k in ["F", "Cl", "Br", "I"] ] #  tri-halides 

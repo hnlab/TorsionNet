@@ -11,3 +11,5 @@ log
 test.ipynb
 *.csv
 redock/
+ffparam/
+pdbbind_mol2s/

@@ -199,11 +199,3 @@ def GOout2energy(orcaoutfile):
         if "*** OPTIMIZATION RUN DONE ***" in line:
             energy = float(lines[i-3].split()[4])
     return energy
-
-
-# if True:
-#     sdffile = "/pubhome/qcxia02/cpds.nonbinders200.0_1.sdf"
-#     torsion_quartet = "4,6,7,8"
-#     outpath = "tmp"
-
-#     sdf2xtbGOinp(sdffile, torsion_quartet, outpath)
