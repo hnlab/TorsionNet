@@ -94,6 +94,7 @@ if __name__ == "__main__":
     input_group2.add_argument('--refsdf', type=str, help="Absolute path of SDF file with the same atom index as the mol for the function derivation")
     input_group2.add_argument('--refsmiles', type=str, help="SMILES string of molecule")
     parser.add_argument("--rootpath", type=PosixPath, help="absolute path of rootpath of study", required=True)
+    parser.add_argument("--outpath", type=PosixPath, help="absolute path of summary.csv output", required=True)
     args = parser.parse_args()
 
     rootpath = args.rootpath
@@ -111,11 +112,12 @@ if __name__ == "__main__":
     if hasattr(args, 'mol2') and args.mol2 is not None:
         inp = args.mol2
         mol = Chem.MolFromMol2File(inp, removeHs=False) # only read the first mol2 mol
+        mols = [mol]
         # canonical_mol = Chem.MolFromSmiles(Chem.MolToSmiles(mol))
 
     if hasattr(args, 'sdf') and args.sdf is not None:
         inp = args.sdf
-        mol = Chem.SDMolSupplier(inp, removeHs=False)[0] # only read the first sdf mol
+        mols = Chem.SDMolSupplier(inp, removeHs=False) # only read the first sdf mol
         # canonical_mol = Chem.MolFromSmiles(Chem.MolToSmiles(mol))
 
     if hasattr(args, 'refmol2') and args.mol2 is not None:
@@ -170,38 +172,39 @@ if __name__ == "__main__":
     # new_order = list(range(len(canonical_mol.GetAtoms())))
     # if len(raw_order) == len(new_order):
     if True:
-        mapindex = get_map_index(refmol, mol)
-        # torsions = GetTorsion0(canonical_mol)
-        # TorsionQuartets_ = [ GetQuartetAtoms1(canonical_mol, torsion) for torsion in torsions ]
-        # _, _, TorsionQuartets_ = GetTorsionQuartet01(mol)
-        TorsionQuartets, _ = GetTorsionQuartet01(refmol)
-        # print(TorsionQuartets)
-        raw_TorsionQuartets = [[ mapindex[i] for i in TorsionQuartet ] for TorsionQuartet in TorsionQuartets ]
-        # print(raw_TorsionQuartets)
-        
-        # raw_TorsionQuartets = [[ new_raw_mapping[index] for index in TorsionQuartet ] for TorsionQuartet in TorsionQuartets]
-        # print(raw_TorsionQuartets)
-        TorsionAngles = [getdihedralangle(mol, raw_TorsionQuartets[i]) for i in range(len(raw_TorsionQuartets))]
-        print(TorsionAngles)
-        # TorsionStrains = [calc_torsion(mol, raw_TorsionQuartets[i], funcs[i], minEs[i]) for i in range(len(raw_TorsionQuartets))]
-        for i in range(len(raw_TorsionQuartets)):
-            try:
-                TorsionStrain = calc_torsion(mol, raw_TorsionQuartets[i], funcdict[i]["func"], funcdict[i]["minE"])
-                TorsionStrains.append(TorsionStrain)
-            except KeyError:
-                TorsionStrains.append(0)
-        print(TorsionStrains)
+        for mol in mols:
+            mapindex = get_map_index(refmol, mol)
+            # torsions = GetTorsion0(canonical_mol)
+            # TorsionQuartets_ = [ GetQuartetAtoms1(canonical_mol, torsion) for torsion in torsions ]
+            # _, _, TorsionQuartets_ = GetTorsionQuartet01(mol)
+            TorsionQuartets, _ = GetTorsionQuartet01(refmol)
+            # print(TorsionQuartets)
+            raw_TorsionQuartets = [[ mapindex[i] for i in TorsionQuartet ] for TorsionQuartet in TorsionQuartets ]
+            # print(raw_TorsionQuartets)
+            
+            # raw_TorsionQuartets = [[ new_raw_mapping[index] for index in TorsionQuartet ] for TorsionQuartet in TorsionQuartets]
+            # print(raw_TorsionQuartets)
+            TorsionAngles = [getdihedralangle(mol, raw_TorsionQuartets[i]) for i in range(len(raw_TorsionQuartets))]
+            print(TorsionAngles)
+            # TorsionStrains = [calc_torsion(mol, raw_TorsionQuartets[i], funcs[i], minEs[i]) for i in range(len(raw_TorsionQuartets))]
+            for i in range(len(raw_TorsionQuartets)):
+                try:
+                    TorsionStrain = calc_torsion(mol, raw_TorsionQuartets[i], funcdict[i]["func"], funcdict[i]["minE"])
+                    TorsionStrains.append(TorsionStrain)
+                except KeyError:
+                    TorsionStrains.append(0)
+            print(TorsionStrains)
+    
+            with open(args.outpath / "summary.csv",'a') as f:
+                f.write(f"{prefix}\t{'%.2f' % sum(TorsionStrains)}\t{'%.2f' % max(TorsionStrains)}\n")
+            print(sum(TorsionStrains))
+            print(max(TorsionStrains))
+            mol_ = copy.deepcopy(mol)
+            write_probe_mol(mol_, raw_TorsionQuartets, TorsionAngles, outprobemolpath, prefix, TorsionStrains)
+            # write_best_mol(mol_, raw_TorsionQuartets, minangles, outbestmolpath, prefix)
 
-        with open(args.rootpath / "summary.csv",'a') as f:
-            f.write(f"{prefix}\t{'%.2f' % sum(TorsionStrains)}\t{'%.2f' % max(TorsionStrains)}\n")
-        print(sum(TorsionStrains))
-        print(max(TorsionStrains))
-        mol_ = copy.deepcopy(mol)
-        write_probe_mol(mol_, raw_TorsionQuartets, TorsionAngles, outprobemolpath, prefix, TorsionStrains)
-        # write_best_mol(mol_, raw_TorsionQuartets, minangles, outbestmolpath, prefix)
-
-    else:
-        print("something wrong! please check!")
+    # else:
+        # print("something wrong! please check!")
     
     print(f">>> Finished with {prefix}")
     print("")

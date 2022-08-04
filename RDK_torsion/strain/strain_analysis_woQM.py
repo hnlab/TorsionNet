@@ -20,7 +20,7 @@ sys.path.append("/pubhome/qcxia02/git-repo/TorsionNet/RDK_torsion/strain/utils")
 from utils import QMoptE_list, CSD_hist, CSDTEU_list, sdf_ang_list, get_map_index, maketorsiondict
 from plot import plotall
 
-def plotallall(smarts,bincounts,func,min_E,rel_E,TEU_energies,degstatistics,xtaldeg,bestnofilter_deg,bestfilter_deg,topnofilter_deg,topfilter_deg,cate,imgpath,rowidx,axs):
+def plotallall(smarts,bincounts,TEU_energies,degstatistics,xtaldeg,bestnofilter_deg,bestfilter_deg,topnofilter_deg,topfilter_deg,cate,imgpath,rowidx,axs):
     for num in range(5):
         if num == 0:
             # 1. plot_TEU
@@ -32,14 +32,14 @@ def plotallall(smarts,bincounts,func,min_E,rel_E,TEU_energies,degstatistics,xtal
             angles = list(range(-180,181,15))
             probe_angs = list(range(-180,181,1))
             ax2 = ax1.twinx()
-            lns1 = ax2.plot(probe_angs, np.array([ func(ang) for ang in probe_angs ]) - min_E, color = "black",label="QM fragment", linewidth=5)
-            ax2.plot(angles, rel_E, color="red", marker="^", markersize=10,linestyle="")
+            # lns1 = ax2.plot(probe_angs, np.array([ func(ang) for ang in probe_angs ]) - min_E, color = "black",label="QM fragment", linewidth=5)
+            # ax2.plot(angles, rel_E, color="red", marker="^", markersize=10,linestyle="")
             ax2.set_ylim(0,20)
 
             # 3. plot CSD-TEU
             lns2 = ax2.plot(probe_angs, TEU_energies, color="blue", label="CSD TEU",linewidth=5)
-            lns = lns1+lns2
-            labs = [l.get_label() for l in lns]
+            # lns = lns1+lns2
+            # labs = [l.get_label() for l in lns]
 
             # plt.close()
             plt.xlim(-185,185)
@@ -52,11 +52,11 @@ def plotallall(smarts,bincounts,func,min_E,rel_E,TEU_energies,degstatistics,xtal
             ax1.set_title(smarts, font1)
             ax1.set_xlabel("Angle(degree)",font2)
             ax1.set_ylabel("CSD histogram count",font2)
-            ax2.set_ylabel("QM relE(kcal/mol) or CSD TEU",font2)
+            ax2.set_ylabel("CSD TEU",font2)
             # ax2.plot(probe_angs, TEU_energies, color="black", marker="o", markersize=5,linestyle="")
             ax1.tick_params(labelsize=23)
             ax2.tick_params(labelsize=23)
-            ax2.legend(lns, labs, loc="upper right",prop={"size":23})
+            ax2.legend(lns2, "CSD TEU", loc="upper right",prop={"size":23})
             
         else:
             ax1 = axs[rowidx][num]
@@ -64,15 +64,15 @@ def plotallall(smarts,bincounts,func,min_E,rel_E,TEU_energies,degstatistics,xtal
             ax1.hist(degs, bins=int(360/10), range=[-180,180],edgecolor="black")
             ax1.set_ylim(0,100)
             ax2 = ax1.twinx()
-            lns1 = ax2.plot(probe_angs, np.array([ func(ang) for ang in probe_angs ]) - min_E, color = "black",label="QM fragment", linewidth=5)
-            ax2.plot(angles, rel_E, color="red", marker="^", markersize=10,linestyle="")
+            # lns1 = ax2.plot(probe_angs, np.array([ func(ang) for ang in probe_angs ]) - min_E, color = "black",label="QM fragment", linewidth=5)
+            # ax2.plot(angles, rel_E, color="red", marker="^", markersize=10,linestyle="")
             ax2.set_ylim(0,20)
             lns2 = ax2.plot(probe_angs, TEU_energies, color="blue", label="CSD TEU",linewidth=5)
             ax1.tick_params(labelsize=23)
             ax2.tick_params(labelsize=23)
         plt.axvline(x=xtaldeg,color="red",linestyle="-",lw=5)
         plt.axhline(y=1.8,color="blue", linestyle="--")
-        plt.axhline(y=5.0,color="red", linestyle="--")
+        # plt.axhline(y=5.0,color="red", linestyle="--")
     axs[rowidx][3].axvline(x=bestnofilter_deg,color="green",linestyle="-",lw=5)
     axs[rowidx][4].axvline(x=bestfilter_deg,color="green",linestyle="-",lw=5)
     axs[rowidx][3].axvline(x=topnofilter_deg,color="purple",linestyle="-",lw=5)
@@ -84,12 +84,10 @@ def plotallall(smarts,bincounts,func,min_E,rel_E,TEU_energies,degstatistics,xtal
     axs[rowidx][3].set_title(f"nofilter",font1)
     axs[rowidx][4].set_title(f"filter, {len(degstatistics[3])} / {len(degstatistics[2])}" + ", " + format(len(degstatistics[3])/len(degstatistics[2]), '.2%'),font1)
 
-def dealdata(qmgopath, inpdbid, i, xtalligsdf, sdffiles, bestnofiltersdf, bestfiltersdf, topnofiltersdf, topfiltersdf, TS, TQ,xmlfile):
-    optlogpath = Path(f"{qmgopath}/{inpdbid}_{i}")
+def dealdata(i,xtalligsdf, sdffiles, bestnofiltersdf, bestfiltersdf, topnofiltersdf, topfiltersdf, TS, TQ,xmlfile):
     smarts = TS[i]
     torquartet = TQ[i]
     bincounts = CSD_hist(smarts, xmlfile) # result is the same as that in Torsion Analyzer
-    rel_E, func, min_E = QMoptE_list(optlogpath=optlogpath) # QMoptE related infos
     TEU_energies = CSDTEU_list(smarts, xmlfile)
 
     # mapindex0 = get_map_index(xtalligsdf, sdffiles[0])
@@ -136,7 +134,7 @@ def dealdata(qmgopath, inpdbid, i, xtalligsdf, sdffiles, bestnofiltersdf, bestfi
         degstatistics.append(degstatistic)
     print(len(degstatistics[0]),len(degstatistics[1]),len(degstatistics[2]),len(degstatistics[3]))
 
-    return smarts,bincounts,func,min_E,rel_E,TEU_energies,degstatistics,xtaldeg,bestnofilter_deg,bestfilter_deg,topnofilter_deg,topfilter_deg
+    return smarts,bincounts,TEU_energies,degstatistics,xtaldeg,bestnofilter_deg,bestfilter_deg,topnofilter_deg,topfilter_deg
 
 def main(cate):
     print(f">>> Dealing with {cate}")
@@ -167,17 +165,14 @@ def main(cate):
             topnofiltersdf = f"{rmsdsdfpath}/{inpdbid}.{samptype}_c{maxconf}b10.TopScorePose.sdf"
             topfiltersdf = f"{rmsdsdfpath}/{inpdbid}.{samptype}_c{maxconf}b10d38{readtype}.TopScorePose.sdf"
             try:
-                smarts,bincounts,func,min_E,rel_E,TEU_energies,degstatistics,\
+                smarts,bincounts,TEU_energies,degstatistics,\
                     xtaldeg,bestnofilter_deg,bestfilter_deg,topnofilter_deg,topfilter_deg = \
                         dealdata(
-                            qmgopath, inpdbid, i, xtalligsdf, sdffiles, bestnofiltersdf, \
+                            i, xtalligsdf, sdffiles, bestnofiltersdf, \
                                 bestfiltersdf, topnofiltersdf, topfiltersdf, TS, TQ,xmlfile
                                 )
-                # plotall(
-                    # smarts,bincounts,func,min_E,rel_E,TEU_energies,degstatistics,xtaldeg,cate=f"{inpdbid}-{samptype}_c{maxconf}b10-{i}",imgpath=imgpath
-                # )
                 plotallall(
-                    smarts,bincounts,func,min_E,rel_E,TEU_energies,degstatistics,xtaldeg,\
+                    smarts,bincounts,TEU_energies,degstatistics,xtaldeg,\
                         bestnofilter_deg,bestfilter_deg,topnofilter_deg,topfilter_deg,\
                             cate=f"{inpdbid}-{samptype}_c{maxconf}b10-{i}",\
                                 imgpath=imgpath,rowidx=i,axs=axs
@@ -210,18 +205,14 @@ def main(cate):
             bestfiltersdf = f"{rmsdsdfpath}/{inpdbid}.{samptype}b10d38{readtype}.BestRMSDPose.sdf"
             topnofiltersdf = f"{rmsdsdfpath}/{inpdbid}.{samptype}b10.TopScorePose.sdf"
             topfiltersdf = f"{rmsdsdfpath}/{inpdbid}.{samptype}b10d38{readtype}.TopScorePose.sdf"
-
             try:
-                smarts,bincounts,func,min_E,rel_E,TEU_energies,degstatistics,\
+                smarts,bincounts,TEU_energies,degstatistics,\
                     xtaldeg,bestnofilter_deg,bestfilter_deg,topnofilter_deg,topfilter_deg = \
                         dealdata(
-                            qmgopath, inpdbid, i, xtalligsdf, sdffiles, bestnofiltersdf, \
+                            i, xtalligsdf, sdffiles, bestnofiltersdf, \
                                 bestfiltersdf, topnofiltersdf, topfiltersdf, TS, TQ, xmlfile)
-                # plotall(
-                    # smarts,bincounts,func,min_E,rel_E,TEU_energies,degstatistics,xtaldeg,cate=f"{inpdbid}-{samptype}b10-{i}",imgpath=imgpath
-                # )
                 plotallall(
-                    smarts,bincounts,func,min_E,rel_E,TEU_energies,degstatistics,xtaldeg,\
+                    smarts,bincounts,TEU_energies,degstatistics,xtaldeg,\
                         bestnofilter_deg,bestfilter_deg,topnofilter_deg,topfilter_deg,\
                             cate=f"{inpdbid}-{samptype}b10-{i}",\
                                 imgpath=imgpath,rowidx=i,axs=axs
@@ -251,16 +242,15 @@ if __name__ == "__main__":
     # for inpdbid in ["1nc3","2cet","2v00","2wtv","3fur","3gc5","4w9c","5dwr"]:
     # for inpdbid in ["2cet","2v00","2wtv","3fur","3gc5","4w9c","5dwr"]:
     # for inpdbid in ["2v00","2wtv","3fur","3gc5","4w9c","5dwr"]:
-    for inpdbid in ["2r9w","4w9i","4ty7","4gkm","4jia","4e6q","2vvn","3b27","2w4x","3ryj","4jxs","4bkt","2xii","2xj7","3dd0","2fvd","2w66","2cet","2v00","2wtv","3fur","3gc5","4w9c","5dwr"]:
-    # for inpdbid in ["3fur"]:
-        for readtype in ["", "sani", "qm"]:
-        # for readtype in ["", "sani"]:
+    # for inpdbid in ["4w9i"]:
+    for inpdbid in ["2v00"]:
+    # for inpdbid in ["2r9w","4w9i","4ty7","4gkm","4jia","4e6q","2vvn","3b27","2w4x","3ryj","4jxs","4bkt","2xii","2xj7","3dd0","2fvd","2w66","2cet","2v00","2wtv","3fur","3gc5","4w9c","5dwr"]:
+        # for readtype in ["", "sani", "qm"]:
+        for readtype in ["maxonly", "sanimaxonly"]:
         # for readtype in ["sani"]:
         # for readtype in ["qm"]:
-            # for samptype in ["C"]:
             for samptype in ["C", "B", "R", "T"]:
-                for maxconf in [1000]:
-                # for maxconf in [100,250,1000]:
+                for maxconf in [100,250,1000]:
                     cates.append(f"{inpdbid}-{samptype}-{maxconf}-{readtype}")
             cates += [f"{inpdbid}-TLDR--{readtype}"]
         
