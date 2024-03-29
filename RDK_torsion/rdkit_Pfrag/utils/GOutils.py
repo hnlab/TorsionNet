@@ -3,8 +3,21 @@ import sys
 
 from pathlib import Path
 
-
 OBABELEXE = "/usr/bin/obabel"
+SDFBOND="{:3d}{:3d}{:3d}{:3d}{:3d}{:3d}{:3d}"
+def fmt_single_sdf(sdffile):
+    newlines = []
+    lines = Path(sdffile).read_text().split("\n")
+    atomcount = int(lines[3].split()[0])
+    bondcount = int(lines[3].split()[1])
+    for i,line in enumerate(lines):
+        if i in range(4+atomcount,4+atomcount+bondcount):
+            lspl = [int(i) for i in line.split()]
+            for _ in range(7 - len(lspl)): # 7 part
+                lspl.append(0)
+            line = SDFBOND.format(*lspl)
+        newlines.append(line)
+    return newlines
 
 def sdf2xtbGOinp_sdf(sdffile, torsion_quartet, outpath="xtbGO"):
     outpath = Path(outpath)
@@ -13,24 +26,21 @@ def sdf2xtbGOinp_sdf(sdffile, torsion_quartet, outpath="xtbGO"):
 
     # trans sdf to xyz
     sdffile = Path(sdffile)
+    xtbsdflines = fmt_single_sdf(sdffile)
     newsdffile = outpath / sdffile.name
-    os.system(f"cp {str(sdffile)} {str(newsdffile)}")
-    if newsdffile.exists():
-        with open(newsdffile, 'a') as f:
-            f.write(f"""
-
+    with open(newsdffile, "w") as f:
+        f.write("\n".join(xtbsdflines))
+        f.write("\n\n")
+        f.write(f"""
 $constrain
-force constant=10.0
+force constant=100.0
 $end
 
 $constrain
 dihedral: {torsion_quartet}, auto
 $end
 """)
-    else:
-        print("no file found")
-
-    return  newsdffile
+    return newsdffile
 
 def sdf2xtbGOinp_xyz(sdffile, torsion_quartet, outpath="xtbGO"):
     outpath = Path(outpath)

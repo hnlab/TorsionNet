@@ -7,7 +7,7 @@ from pathlib import Path, PosixPath
 from rdkit import Chem
 from rdkit.Chem import Draw
 
-sys.path.append("/pubhome/qcxia02/git-repo/TorsionNet/RDK_torsion/rdkit_Pfrag/utils")
+sys.path.append("/home/qcxia/git-repo/TorsionNet/RDK_torsion/rdkit_Pfrag/utils")
 from TFG_TEU import TorsionFragmentGenerator_TEU
 
 
@@ -50,7 +50,8 @@ if True:
             mol = Chem.SDMolSupplier(newsdffile, sanitize = False, removeHs = False)[0] # readfile
             molname = Path(sdffile).name[:-4]
         else: # without unicon, directly read
-            mol = Chem.SDMolSupplier(sdffile, sanitize = False, removeHs = False)[0] # readfile
+            # mol = Chem.SDMolSupplier(sdffile, sanitize = False, removeHs = False)[0] # readfile
+            mol = Chem.SDMolSupplier(sdffile, sanitize = True, removeHs = False)[0] # readfile
             molname = Path(sdffile).name[:-4]
 
     if args.mol2:
@@ -67,6 +68,7 @@ if True:
             mol = Chem.MolFromMol2File(mol2file, removeHs = False) # readfile, sanitize=True
             molname = Path(mol2file).name[:-5]
 
+    print(mol)
     print(f">>>>>> Dealing with {molname} <<<<<<")
 
     ### OUTPUT .sdf molecules will be saved in outpath dir at current working directory

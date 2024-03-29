@@ -8,13 +8,13 @@ from pathlib import Path, PosixPath
 from rdkit import Chem
 from ase.units import Hartree, kcal, mol
 molunit = mol
-sys.path.append("/pubhome/qcxia02/git-repo/TorsionNet/RDK_torsion/rdkit_Pfrag/utils")
+sys.path.append("/home/qcxia/git-repo/TorsionNet/RDK_torsion/rdkit_Pfrag/utils")
 from GOutils import sdf2xtbGOinp_sdf, sdf2SPorcainp, sdf2GOorcainp,SPout2energy,GOout2energy, SPorcainp2GOorcainp
 from utils import getsdfchg
 
 OBABELEXE = "/usr/bin/obabel"
-XTBEXE = "/pubhome/qcxia02/miniconda3/envs/basic/bin/xtb"
-ORCAEXE = "/pubhome/soft/orca/orca_5_openmpi411/orca"
+XTBEXE = "/home/qcxia/miniconda3/envs/basic/bin/xtb"
+ORCAEXE = "/home/soft/orca/5/orca"
 
 
 if __name__ == "__main__":
@@ -26,6 +26,7 @@ if __name__ == "__main__":
     parser.add_argument("--QMopt", action="store_true", default=False, help="trigger QM optimization")
     parser.add_argument("--torsionquartet", nargs="+", help="set torsion quartet manually")
     parser.add_argument("--method", type=str, help="QM level, e.g. 'B3LYP def2-SVP",default="r2SCAN-3c")
+    parser.add_argument("--nprocs", type=int, help="number of CPUs used for QM calculation",default="1")
     args = parser.parse_args()
 
     # rootpath = Path("/pubhome/qcxia02/git-repo/TorsionNet/RDK_torsion/rdkit_Pfrag/outputs")
@@ -52,7 +53,7 @@ if __name__ == "__main__":
         MMscanpath_sub = MMscanpath /  subdir # subsetpath
 
         ## get info from sdffile ##
-        sdffile = MMscanpath / MMscanpath_sub / (MMscanpath_sub.name + "-1_000.sdf")
+        sdffile = MMscanpath_sub / (MMscanpath_sub.name + "-1_000.sdf")
         mol = Chem.SDMolSupplier(str(sdffile))[0]
         try:
             torsion_quartet = mol.GetProp("TORSION_ATOMS_FRAGMENT")
@@ -65,10 +66,6 @@ if __name__ == "__main__":
             list([str(int(idx) + 1) for idx in torsion_quartet.split()])
         )
         # totchg = getsdfchg(sdffile)
-
-        # with open(xtbGOpath / "name_chg_tor-quartet.csv", 'a') as f:
-            # f.write(f"{MMscanpath_sub.name},{totchg},{torsion_quartet}\n")
-        #####################f######
 
         outpath = xtbGOpath / MMscanpath_sub.name
         if not outpath.exists():
@@ -118,8 +115,8 @@ if __name__ == "__main__":
         # method = "r2SCAN-3c"
         # method = "B3LYP def2-SVP"
         method = args.method
-
-        taskline = f"! {method}\n%pal nprocs 8 end"  # parallel
+        nprocs = args.nprocs
+        taskline = f"! {method}\n%pal nprocs {nprocs} end"  # parallel
         for outsdffile in xtbGOpath_sub.iterdir():
             if outsdffile.name.endswith(".opt.sdf"):
                 inpfile = sdf2SPorcainp(
@@ -180,7 +177,8 @@ if __name__ == "__main__":
         # method = "r2SCAN-3c"
         # method = "B3LYP def2-SVP"
         method=args.method
-        taskline = f"! {method} opt\n%pal nprocs 8 end"  # parallel
+        nprocs=args.nprocs
+        taskline = f"! {method} opt\n%pal nprocs {nprocs} end"  # parallel
 
         energies = []
         # for optsdffile in QMSPfiles:

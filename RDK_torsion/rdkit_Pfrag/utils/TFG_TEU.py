@@ -1,7 +1,5 @@
 import os
-from pickle import TRUE
 import sys
-import copy
 from functools import partial
 from pathlib import Path
 
@@ -11,14 +9,16 @@ from rdkit.Chem.Lipinski import RotatableBondSmarts
 from rdkit.Chem.rdDistGeom import EmbedMolecule, EmbedMultipleConfs, ETKDGv3
 from rdkit.Chem.rdForceFieldHelpers import MMFFOptimizeMolecule,MMFFOptimizeMoleculeConfs
 
-sys.path.append("/pubhome/qcxia02/git-repo/TorsionNet/RDK_torsion/rdkit_Pfrag/utils")
+sys.path.append("/home/qcxia/git-repo/TorsionNet/RDK_torsion/rdkit_Pfrag/utils")
+
 from utils import GetRingSystems, findneighbour, Get_sorted_heavy
+from TL_Functions import TL_lookup
 # from testFrags import RDK_NCOPS_group_SMARTS_NOS_simplified
 from testFrags import ChayaSt_fragmentation
 
 import xml.etree.ElementTree as ET
 
-xmlpath = "/pubhome/qcxia02/git-repo/TorsionNet/RDK_torsion/rdkit_Pfrag/utils/tor_lib_2020.xml.modNLP3.xml"
+xmlpath = "/home/qcxia/git-repo/TorsionNet/RDK_torsion/rdkit_Pfrag/utils/tor_lib_2020.xml.modNLP3.xml"
 tree = ET.parse(xmlpath)
 
 root = tree.getroot() # get the root of tree
@@ -105,10 +105,6 @@ def get_matches_pairs_torsionsmarts_idx(mol, TorsionSmarts,matched_TP,matched_TS
     return matched_TP,matched_TS,idx
     
 def GetTorsionQuartet01(mol):
-    sys.path.append("/pubhome/qcxia02/work/confgen/src/strain")
-    from TL_Functions import TL_lookup
-    import pandas as pd
-
     # try:
     M = TL_lookup(mol) #Create a TP_list function
     mol_est = []
